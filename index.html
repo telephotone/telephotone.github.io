@@ -97,8 +97,10 @@
   @media (max-width:560px){
     .topbar{display:block; position:relative; padding:14px 14px 12px;}
     .brand{display:block; padding-right:128px; min-width:0;}
-    .brand .wordmark{display:block; font-size:15px; letter-spacing:.2em;}
-    .brand .wordmarkJp{font-size:10px; letter-spacing:.08em;}
+    .brand .wordmark{display:block; font-size:15px; letter-spacing:.2em; white-space:nowrap;}
+    /* カナ表記は独立行に(中途半端な折返しを防ぐ) */
+    .brand .wordmarkJp{display:block; font-size:10px; letter-spacing:.12em;
+      margin-top:3px; white-space:nowrap;}
     .brand .sub{font-size:8px; letter-spacing:.1em;}
     .power{position:absolute; top:14px; right:14px; gap:7px;}
     .pwrLbl{font-size:8px; letter-spacing:.14em;}
