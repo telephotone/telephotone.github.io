@@ -497,6 +497,7 @@
           <li>Keep only the emitting surface inside the ROI; fix the camera on a tripod</li>
           <li>Re-capture calibration whenever lighting conditions change</li>
           <li>Camera requires https (or localhost)</li>
+          <li><b>iPhone: turn OFF the side silent switch</b> ── Web Audio is muted while the ringer is silenced</li>
         </ul>
       </details>
     </section>
@@ -637,6 +638,8 @@ $('pwrSw').addEventListener('change', () => {
   powered = $('pwrSw').checked;
   $('synth').classList.toggle('on', powered);
   if (powered){
+    // iOS Safari対策:ユーザー操作(電源投入)の同期文脈でAudioContextを解錠
+    txVoice.ensure(); rxVoice.ensure();
     powerOnFx();
     bootSequence();
   } else {
@@ -1078,8 +1081,15 @@ function commitState(s){
 /* ---- カメラ ---- */
 $('rxKey').onclick = () => {
   if (needPower()) return;
+  // iOS Safari対策:getUserMediaのawaitで操作文脈が切れる前に同期で音声解錠
+  rxVoice.ensure();
   if (stream) stopCamera(); else startCamera();
 };
+/* iOS Safari対策:通電中は任意のタッチ/クリックで suspended を解除し続ける */
+['pointerdown', 'touchend'].forEach(ev =>
+  document.addEventListener(ev, () => {
+    if (powered){ txVoice.ensure(); rxVoice.ensure(); }
+  }, { passive: true }));
 async function startCamera(){
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
     showHint('CAMERA API UNAVAILABLE ── OPEN VIA HTTPS OR LOCALHOST (NOT file://)');
@@ -1378,6 +1388,8 @@ td,th{border:1px solid #c9c7bf; padding:4px 12px; text-align:left;}
 <li><b>受信側:</b>主電源を入れ「受信」でカメラ起動、白枠(ROI)を発光面に合わせ、較正光の発光中に「較正取込」</li>
 <li><b>送信側:</b>「演奏送信(TRANSMIT)」を入にして鍵盤を弾く(PCキー:下段ZXC…/上段Q2W…)</li>
 <li><b>受信側:</b>音が鳴り、音名と鍵盤ハイライトが表示されます</li>
+<li><b>iPhoneの場合:</b>本体側面のサイレントスイッチをOFF(着信音オン)にしてください。
+消音中はWeb Audioの音が出ません。音量ボタンも確認を</li>
 <li><b>自動演奏(AUTO PLAY):</b>内蔵の古典旋律(著作権消滅済み)を方向幕で選び、PLAYを入にすると
 自動送信します。LOOPで繰り返し。鍵盤に触れると自動演奏は停止します</li>
 </ol>
