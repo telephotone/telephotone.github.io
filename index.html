@@ -92,17 +92,20 @@
   /* ---------- モジュール共通 ---------- */
   .deck{display:grid; grid-template-columns:1fr 1fr; }
   @media (max-width:720px){ .deck{grid-template-columns:1fr;} .mod+.mod{border-left:none !important; border-top:1px solid var(--line);} }
-  /* 狭幅(スマホ):主電源が右端で見切れないように詰める */
+  /* 狭幅(スマホ):主電源は右上に絶対配置し、タイトル側に専用余白を確保
+     (フレックス詰めでは字間の広いワードマークと重なるため配置方式を分ける) */
   @media (max-width:560px){
-    .topbar{padding:14px 14px 12px; gap:10px;}
-    .brand{min-width:0;}
-    .brand .wordmark{font-size:15px; letter-spacing:.22em; white-space:nowrap;}
-    .brand .wordmarkJp{font-size:10px; letter-spacing:.1em;}
-    .brand .sub{font-size:8px; letter-spacing:.12em;}
-    .power{flex:none; gap:8px; margin-right:4px;}
-    .pwrLbl{font-size:8.5px; letter-spacing:.18em;}
-    .pwrLbl b{font-size:10px; letter-spacing:.2em;}
-    .pwrSw{width:52px;}
+    .topbar{display:block; position:relative; padding:14px 14px 12px;}
+    .brand{display:block; padding-right:128px; min-width:0;}
+    .brand .wordmark{display:block; font-size:15px; letter-spacing:.2em;}
+    .brand .wordmarkJp{font-size:10px; letter-spacing:.08em;}
+    .brand .sub{font-size:8px; letter-spacing:.1em;}
+    .power{position:absolute; top:14px; right:14px; gap:7px;}
+    .pwrLbl{font-size:8px; letter-spacing:.14em;}
+    .pwrLbl b{font-size:9.5px; letter-spacing:.18em;}
+    .pwrSw{width:50px; height:26px;}
+    .pwrSw::after{width:21px; height:18px;}
+    .pwrSw:checked::after{left:26px;}
     .sysbar, .mod, .keybed{padding-left:14px; padding-right:14px;}
     .warnStrip, .footer{padding-left:14px; padding-right:14px;}
   }
