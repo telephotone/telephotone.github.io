@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Telephotone 輝度階調テスター TPV-04 by TELEPHONOVISION</title>
+<style>
+  :root{
+    --wood1:#8a5c30; --wood2:#6b4522;
+    --plate-hi:#dcd9d1; --plate:#cbc8bf; --plate-lo:#b5b2a8; --plate-edge:#8f8c83;
+    --ink:#3a3831; --ink-dim:#6b675c;
+    --screen:#0c0a04; --bezel:#23231f;
+    --fg:#ffb000; --fg-bright:#ffd060; --dim:#9a7a3a; --faint:#5c4a24;
+    --ok:#7dff8a; --warn:#ffd060; --err:#ff5f4d;
+    --paper:#e8dfc0; --paper-ink:#3a3020;
+    --mono:"Courier New",ui-monospace,SFMono-Regular,Menlo,Consolas,"Osaka-Mono","MS Gothic",monospace;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0; color:var(--ink); font-family:var(--mono);}
+  body{padding:18px 12px 30px;
+    background:
+      repeating-linear-gradient(93deg, rgba(50,24,4,.14) 0 3px, rgba(0,0,0,0) 3px 9px, rgba(120,70,25,.12) 9px 14px),
+      linear-gradient(180deg,var(--wood1),var(--wood2)) fixed;}
+  body::after{content:''; position:fixed; inset:0; pointer-events:none; z-index:998;
+    background:radial-gradient(ellipse at center, transparent 68%, rgba(0,0,0,.3) 100%);}
+  .cabinet{max-width:760px; margin:0 auto; position:relative; border-radius:6px;
+    padding:14px 12px 18px;
+    border:1px solid #4a3418;
+    background-image:
+      radial-gradient(circle 6px at 15px 15px, #efece4 0 2px, #7a776e 2.6px 4px, transparent 6px),
+      radial-gradient(circle 6px at calc(100% - 15px) 15px, #efece4 0 2px, #7a776e 2.6px 4px, transparent 6px),
+      radial-gradient(circle 6px at 15px calc(100% - 15px), #efece4 0 2px, #7a776e 2.6px 4px, transparent 6px),
+      radial-gradient(circle 6px at calc(100% - 15px) calc(100% - 15px), #efece4 0 2px, #7a776e 2.6px 4px, transparent 6px),
+      linear-gradient(180deg,var(--plate-hi) 0%,var(--plate) 55%,var(--plate-lo) 100%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.75), inset 0 -2px 4px rgba(0,0,0,.22);}
+  .glow{text-shadow:0 0 7px currentColor;}
+  header{position:relative; padding:10px 4px 6px;}
+  header::after{content:''; position:absolute; right:8px; top:6px; width:58px; height:58px; border-radius:50%;
+    background-image:radial-gradient(circle 2.5px, #55524a 0 1.3px, transparent 2px);
+    background-size:9px 9px; background-position:4px 4px;
+    border:1px solid var(--plate-edge);
+    box-shadow:inset 0 2px 4px rgba(0,0,0,.3), 0 1px 0 rgba(255,255,255,.6);}
+  header h1{margin:0; display:inline-block; font-size:17px; letter-spacing:4px;
+    max-width:calc(100% - 76px); padding:6px 0 2px;
+    color:#22201a; text-shadow:0 1px 0 rgba(255,255,255,.65);}
+  header h1 .tag{font-size:9px; letter-spacing:2px; color:#45423a; vertical-align:middle; font-style:italic;}
+  header p{margin:8px 0 0 2px; color:var(--ink-dim); font-size:10.5px; letter-spacing:1px;}
+  /* 銘板(真鍮エッチングプレート) */
+  .nameplate{margin:12px auto 2px; max-width:340px; text-align:center; border-radius:5px;
+    padding:10px 14px 9px; border:1px solid #7a6428; position:relative;
+    background-image:
+      radial-gradient(circle 4px at 9px 50%, #f5ecc8 0 1.6px, #6e5a20 2px 3px, transparent 4px),
+      radial-gradient(circle 4px at calc(100% - 9px) 50%, #f5ecc8 0 1.6px, #6e5a20 2px 3px, transparent 4px),
+      linear-gradient(160deg,#d9c274 0%, #b89a48 45%, #cbb35e 60%, #a8893c 100%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.55), inset 0 -2px 3px rgba(0,0,0,.3), 0 2px 4px rgba(0,0,0,.3);}
+  .nameplate .np1{font-size:15px; font-weight:700; letter-spacing:2px; color:#3d3010;
+    text-shadow:0 1px 0 rgba(255,255,255,.4);}
+  .nameplate .np2{font-size:11px; letter-spacing:3px; color:#4a3c14; margin-top:3px;
+    text-shadow:0 1px 0 rgba(255,255,255,.35);}
+  .nameplate .np3{font-size:9.5px; letter-spacing:2px; color:#5a4a1c; margin-top:2px; font-style:italic;
+    text-shadow:0 1px 0 rgba(255,255,255,.3);}
+  /* 丸押しボタン+ランプ */
+  .pbRow{display:flex; gap:18px; justify-content:center; margin-top:16px; flex-wrap:wrap;}
+  .pb{display:flex; flex-direction:column; align-items:center; gap:7px;}
+  .pushBtn{width:56px; height:56px; border-radius:50%; border:1px solid #6f6c63; cursor:pointer;
+    background:radial-gradient(circle at 35% 30%, #f6f4ee, #c6c3ba 60%, #a19e95);
+    box-shadow:0 5px 0 #8a877e, 0 6px 10px rgba(0,0,0,.3), inset 0 1px 0 #fff;}
+  .pushBtn:active{transform:translateY(4px); box-shadow:0 1px 0 #8a877e;}
+  .pushBtn.red{border-color:#6e150c;
+    background:radial-gradient(circle at 35% 30%, #ff8a72, #c93a26 60%, #8a1d10);
+    box-shadow:0 5px 0 #6e150c, 0 6px 10px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.5);}
+  .pushBtn.red:active{transform:translateY(4px); box-shadow:0 1px 0 #6e150c;}
+  .pushBtn.blue{border-color:#123a6e;
+    background:radial-gradient(circle at 35% 30%, #7ab4f2, #2a63b0 60%, #143a72);
+    box-shadow:0 5px 0 #123a6e, 0 6px 10px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.5);}
+  .pushBtn.blue:active{transform:translateY(4px); box-shadow:0 1px 0 #123a6e;}
+  .pushBtn.amber{border-color:#6e4a0c;
+    background:radial-gradient(circle at 35% 30%, #ffd88a, #c9902a 60%, #8a5c10);
+    box-shadow:0 5px 0 #6e4a0c, 0 6px 10px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.5);}
+  .pushBtn.amber:active{transform:translateY(4px); box-shadow:0 1px 0 #6e4a0c;}
+  .pbLabel{font-size:11px; letter-spacing:2px; color:var(--ink);}
+  .lamp{width:11px; height:11px; border-radius:50%; background:#8a877e; border:1px solid #5c594f;
+    box-shadow:inset 0 2px 3px rgba(0,0,0,.5);}
+  .lamp.on{background:#ffb000; border-color:#8a5f14;
+    box-shadow:0 0 9px rgba(255,176,0,.95), inset 0 -1px 2px rgba(0,0,0,.3);}
+  .lamp.green.on{background:#3fb950; border-color:#1d6b2c; box-shadow:0 0 9px rgba(63,185,80,.95);}
+  .lamp.red.on{background:#ff4530; border-color:#7a1810; box-shadow:0 0 9px rgba(255,69,48,.95);}
+  /* ダイヤルセレクタ */
+  .dialRow{display:flex; gap:16px; align-items:center;}
+  .dial{width:66px; height:66px; flex:none; border-radius:50%; position:relative; cursor:pointer;
+    background:radial-gradient(circle at 35% 30%, #dcd9d1, #a5a29a 70%, #8a877e);
+    border:1px solid #6f6c63; box-shadow:0 3px 6px rgba(0,0,0,.35), inset 0 1px 0 #fff;}
+  .dialKnob{position:absolute; inset:9px; border-radius:50%; transition:transform .15s;
+    background:radial-gradient(circle at 40% 32%, #55524a, #2e2c26 75%);
+    box-shadow:0 2px 4px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.15);}
+  .dialKnob::after{content:''; position:absolute; top:3px; left:50%; margin-left:-2px;
+    width:4px; height:17px; border-radius:2px; background:#f2efe6;
+    box-shadow:0 0 3px rgba(0,0,0,.6);}
+  .optLamps{flex:1; display:grid; grid-template-columns:repeat(4,1fr); gap:6px;}
+  .opt{display:flex; flex-direction:column; align-items:center; gap:5px;
+    padding:6px 2px; cursor:pointer; border-radius:6px;}
+  .opt:hover{background:rgba(0,0,0,.05);}
+  .opt.sel .lamp{background:#ffb000; border-color:#8a5f14;
+    box-shadow:0 0 9px rgba(255,176,0,.95), inset 0 -1px 2px rgba(0,0,0,.3);}
+  .optTxt{font-size:10px; line-height:1.4; letter-spacing:1px; color:var(--ink-dim); text-align:center;}
+  /* ニキシー管 */
+  .estRow{display:flex; gap:10px; align-items:stretch;}
+  .nixie{flex:1; min-width:0; height:52px; display:flex; align-items:center; justify-content:center; gap:6px;
+    border:2px solid var(--bezel); outline:1px solid #8f8c83; border-radius:10px;
+    background:
+      repeating-linear-gradient(0deg, rgba(0,0,0,.35) 0 1px, transparent 1px 3px),
+      radial-gradient(ellipse at center, #1c0d04 0%, #0d0602 78%);
+    box-shadow:inset 0 0 12px rgba(0,0,0,.9), 0 1px 0 rgba(255,255,255,.55);}
+  .nx{font-size:21px; font-family:var(--mono); color:#ff9b4a; letter-spacing:2px;
+    text-shadow:0 0 8px rgba(255,120,30,.95), 0 0 16px rgba(255,90,20,.5);}
+  .nxUnit{font-size:8px; letter-spacing:1px; color:#8a5230;}
+  main{padding:12px 0 4px;}
+  .panel{border:1px solid var(--plate-edge); border-radius:8px; padding:16px 14px 14px; margin-top:14px;
+    background:linear-gradient(180deg,#d4d1c9,#c2bfb6);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.7), inset 0 -2px 3px rgba(0,0,0,.15);}
+  .panelTitle{font-size:12px; letter-spacing:3px; color:var(--ink); font-weight:700; margin:0 0 4px;
+    text-shadow:0 1px 0 rgba(255,255,255,.6);}
+  .hidden{display:none !important;}
+  label{font-size:10.5px; color:var(--ink-dim); display:block; margin:12px 0 5px; letter-spacing:1.5px;}
+  label, .fieldHint, .meta, .small, .status, .check span, .pbLabel, .optTxt, header p, details summary, .panelTitle{
+    text-shadow:0 1px 0 rgba(255,255,255,.6);}
+  select{width:100%; color:var(--ink); border:1px solid var(--plate-edge); border-radius:7px; padding:9px;
+    font-size:13px; font-family:var(--mono);
+    background:linear-gradient(180deg,#f2f0ea,#d5d2c9);
+    box-shadow:0 2px 0 var(--plate-edge), inset 0 1px 0 #fff;}
+  input[type=range]{width:100%; accent-color:#55524a;}
+  .btn{display:block; width:100%; padding:13px; margin-top:14px; font-size:15px; font-weight:700;
+    letter-spacing:3px; font-family:var(--mono); border:1px solid var(--plate-edge); border-radius:8px;
+    cursor:pointer; color:var(--ink);
+    background:linear-gradient(180deg,#f4f2ec,#cfccc3);
+    box-shadow:0 4px 0 var(--plate-edge), 0 5px 9px rgba(0,0,0,.25), inset 0 1px 0 #fff;}
+  .btn:active{transform:translateY(3px); box-shadow:0 1px 0 var(--plate-edge), inset 0 1px 2px rgba(0,0,0,.15);}
+  .btn:disabled{opacity:.4; cursor:default;}
+  .btn.stop{color:#8a1d10;}
+  .btnRow{display:flex; gap:10px;}
+  .btnRow .btn{flex:1;}
+  .meta{font-size:11px; color:var(--ink-dim); margin-top:9px; line-height:1.7; letter-spacing:.5px; min-height:1.7em;}
+  .warnBox{margin-top:18px; padding:26px 18px; border:2px solid #6b675c; border-radius:8px;
+    display:flex; align-items:center; gap:16px;
+    color:#4a3a24; font-size:12.5px; line-height:1.9;
+    background-image:
+      radial-gradient(circle 4.5px at 10px 6px, #f5f2ea 0 1.8px, #6b675c 2.2px 3.2px, transparent 4.5px),
+      radial-gradient(circle 4.5px at calc(100% - 10px) 6px, #f5f2ea 0 1.8px, #6b675c 2.2px 3.2px, transparent 4.5px),
+      radial-gradient(circle 4.5px at 10px calc(100% - 6px), #f5f2ea 0 1.8px, #6b675c 2.2px 3.2px, transparent 4.5px),
+      radial-gradient(circle 4.5px at calc(100% - 10px) calc(100% - 6px), #f5f2ea 0 1.8px, #6b675c 2.2px 3.2px, transparent 4.5px),
+      repeating-linear-gradient(-45deg,#f5b400 0 14px,#1a1a18 14px 28px),
+      repeating-linear-gradient(-45deg,#f5b400 0 14px,#1a1a18 14px 28px),
+      linear-gradient(180deg,#eadfba,#d2c69e);
+    background-size:auto,auto,auto,auto,100% 12px,100% 12px,auto;
+    background-position:0 0,0 0,0 0,0 0,left top,left bottom,0 0;
+    background-repeat:no-repeat;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.65), inset 0 -2px 3px rgba(0,0,0,.18);}
+  .warnTri{flex:none; font-size:46px; line-height:1; color:#b02c14;
+    text-shadow:0 1px 0 rgba(255,255,255,.55);}
+  .warnBox b{display:block; color:#8a1d10; font-size:14px; letter-spacing:1px; margin-bottom:2px;
+    text-shadow:0 1px 0 rgba(255,255,255,.5);}
+  .check{display:flex; align-items:center; gap:10px; margin-top:12px; font-size:13px;
+    letter-spacing:1px; color:var(--ink);}
+  .check input{appearance:none; -webkit-appearance:none; width:40px; height:20px; flex:none;
+    background:#55524a; border:1px solid #3a3831; border-radius:10px; position:relative;
+    cursor:pointer; box-shadow:inset 0 2px 4px rgba(0,0,0,.55), 0 1px 0 rgba(255,255,255,.6);}
+  .check input::after{content:''; position:absolute; top:2px; left:2px; width:14px; height:14px;
+    border-radius:50%; background:linear-gradient(180deg,#f4f2ec,#b5b2a8);
+    transition:left .15s; box-shadow:0 1px 2px rgba(0,0,0,.55);}
+  .check input:checked{background:#7a5a10; box-shadow:inset 0 2px 4px rgba(0,0,0,.5), inset 0 0 8px rgba(255,176,0,.6), 0 1px 0 rgba(255,255,255,.6);}
+  .check input:checked::after{left:22px; background:linear-gradient(180deg,#ffd060,#c99418);
+    box-shadow:0 1px 2px rgba(0,0,0,.5), 0 0 6px rgba(255,176,0,.7);}
+  details{margin-top:14px; background:#c2bfb6; border:1px solid var(--plate-edge); border-radius:8px; padding:10px 12px;
+    box-shadow:inset 0 1px 3px rgba(0,0,0,.18);}
+  details summary{cursor:pointer; font-size:12px; color:var(--ink); letter-spacing:1px;}
+  details ul, details ol{margin:8px 0 2px; padding-left:18px; font-size:11.5px; color:var(--ink-dim); line-height:1.9;}
+  details b{color:var(--ink);}
+  .bezel{margin-top:6px; padding:13px; border-radius:11px; border:1px solid #6f6c63;
+    background-image:
+      radial-gradient(circle 4.5px at 10px 10px, #efece4 0 1.8px, #6b675c 2.2px 3.2px, transparent 4.5px),
+      radial-gradient(circle 4.5px at calc(100% - 10px) 10px, #efece4 0 1.8px, #6b675c 2.2px 3.2px, transparent 4.5px),
+      radial-gradient(circle 4.5px at 10px calc(100% - 10px), #efece4 0 1.8px, #6b675c 2.2px 3.2px, transparent 4.5px),
+      radial-gradient(circle 4.5px at calc(100% - 10px) calc(100% - 10px), #efece4 0 1.8px, #6b675c 2.2px 3.2px, transparent 4.5px),
+      linear-gradient(180deg,#bab7ad,#9d9a90);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.55), inset 0 -2px 4px rgba(0,0,0,.28), 0 2px 4px rgba(0,0,0,.22);}
+  .crt{position:relative; margin-top:0; height:240px; overflow:hidden;
+    background:
+      repeating-linear-gradient(0deg, rgba(0,0,0,.55) 0 1px, rgba(255,176,0,.05) 1px 2px, transparent 2px 3px),
+      radial-gradient(ellipse at center, #241b0c 0%, #120e05 78%);
+    border:4px solid var(--bezel); outline:1px solid #8f8c83; border-radius:14px;
+    box-shadow:inset 0 0 28px rgba(0,0,0,.9), inset 0 0 30px rgba(255,176,0,.06), 0 1px 0 rgba(255,255,255,.55);}
+  #camView{position:absolute; inset:0; background:#000;}
+  #camView video{width:100%; height:100%; object-fit:cover; display:block;}
+  #camView::after{content:''; position:absolute; inset:0; pointer-events:none; z-index:3;
+    background:repeating-linear-gradient(0deg, rgba(0,0,0,.35) 0 1px, transparent 1px 3px);}
+  #camIdle{position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    color:var(--faint); font-size:13px; letter-spacing:3px;}
+  #roiCanvas{position:absolute; inset:0; width:100%; height:100%; touch-action:none; z-index:4;}
+  #plot{display:block; width:100%; border:4px solid var(--bezel); outline:1px solid #8f8c83; border-radius:14px;
+    background:var(--screen);
+    box-shadow:inset 0 0 20px rgba(0,0,0,.9), 0 1px 0 rgba(255,255,255,.55);}
+  .diag{display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:0;}
+  .diag>div{border:2px solid var(--bezel); outline:1px solid #8f8c83;
+    border-radius:8px; padding:7px 4px; text-align:center;
+    background:
+      repeating-linear-gradient(0deg, rgba(0,0,0,.55) 0 1px, rgba(77,255,122,.05) 1px 2px, transparent 2px 3px),
+      radial-gradient(ellipse at center, #10240f 0%, #071106 78%);
+    box-shadow:inset 0 0 10px rgba(0,0,0,.9), 0 1px 0 rgba(255,255,255,.5);}
+  .diag .dv{display:block; font-size:17px; font-weight:700; color:#4dff7a; line-height:1.1;
+    text-shadow:0 0 6px rgba(77,255,122,.55);}
+  .diag .dl{display:block; font-size:9.5px; color:#4a7a52; margin-top:3px; letter-spacing:1px;}
+  .diag .good{color:var(--ok);} .diag .warn{color:var(--warn);} .diag .bad{color:var(--err);}
+  .status{display:flex; align-items:center; gap:8px; margin-top:10px; font-size:13px;
+    letter-spacing:1px; color:var(--ink);}
+  .dot{width:9px; height:9px; border-radius:50%; background:#8f8c83; flex:none;
+    box-shadow:inset 0 1px 2px rgba(0,0,0,.5);}
+  .dot.idle{background:#8f8c83;}
+  .dot.signal{background:#f5b400; box-shadow:0 0 7px rgba(245,180,0,.9);}
+  .dot.rx{background:#3fb950; box-shadow:0 0 7px rgba(63,185,80,.9); animation:blink 1s infinite;}
+  @keyframes blink{50%{opacity:.35;}}
+  .small{font-size:11px; color:var(--ink-dim); letter-spacing:.5px;}
+  /* 紙テープ(計測レポート) */
+  #reports{margin-top:12px;}
+  .tape{position:relative; background:var(--paper); color:var(--paper-ink);
+    border-radius:3px; padding:11px 14px 11px 22px; margin-top:10px;
+    font-size:12.5px; letter-spacing:1px; line-height:1.8;
+    box-shadow:0 2px 6px rgba(0,0,0,.55);}
+  .tape::before{content:''; position:absolute; left:8px; top:4px; bottom:4px; width:5px;
+    background-image:radial-gradient(circle, rgba(58,48,32,.5) 1.6px, transparent 2px);
+    background-size:5px 9px; background-repeat:repeat-y;}
+  .tape .head{font-size:10px; letter-spacing:1px; color:#7a6a48; margin-bottom:4px;}
+  .tape .verdict{font-size:14px; font-weight:700; margin-top:4px;}
+  .tape .verdict.ok{color:#3f7a3a;} .tape .verdict.mid{color:#8a6a10;} .tape .verdict.bad{color:#a04030;}
+  .tape .time{font-size:10px; color:#8a7a58; margin-top:5px; letter-spacing:1px;}
+  .tape table{border-collapse:collapse; margin-top:4px; font-size:11px;}
+  .tape td, .tape th{padding:1px 8px 1px 0; text-align:right; color:#5a4a30;}
+  #toast{position:fixed; left:50%; bottom:26px; transform:translateX(-50%); z-index:1200;
+    background:#241c0c; color:var(--warn); border:1px solid #3a2f18; border-radius:6px;
+    padding:9px 16px; font-size:12px; letter-spacing:1px; display:none; max-width:90vw;}
+  /* 発光面(全画面フォールバック) */
+  #flash{position:fixed; inset:0; z-index:1100; background:#000; display:none; cursor:pointer;}
+  #flash.on{display:block;}
+  #flashInfo{position:absolute; left:50%; bottom:30px; transform:translateX(-50%);
+    padding:7px 16px; border-radius:18px; background:rgba(20,15,5,.8);
+    color:#7a6a40; font-size:12px; letter-spacing:1px; pointer-events:none; white-space:nowrap;}
+  .manualLink{display:block; text-align:center; margin-top:16px; font-size:12px; letter-spacing:1px;
+    color:var(--ink-dim); cursor:pointer; text-decoration:underline;}
+</style>
+</head>
+<body>
+
+<div class="cabinet">
+<header>
+  <h1>▚ TELEPHOTONE <span class="tag">by TELEPHONOVISION</span></h1>
+  <p>可視光楽器システム ── 輝度階調テスター(開発工程 1/5)/LIDI規格 実効分解能計測ユニット</p>
+</header>
+
+<!-- 銘板(確定表記) -->
+<div class="nameplate">
+  <div class="np1">Telephotone 　テレフォトン</div>
+  <div class="np2">型式:TPV-04</div>
+  <div class="np3">TELEPHONOVISION('26年製)</div>
+</div>
+
+<main>
+  <!-- ============ 操作ボタン ============ -->
+  <section class="panel">
+    <div class="pbRow" style="margin-top:4px">
+      <div class="pb"><span class="lamp" id="lampPop"></span>
+        <button class="pushBtn" id="popOpen" title="別ウィンドウの発光面を開く"></button>
+        <span class="pbLabel">発光ウィンドウ</span></div>
+      <div class="pb"><span class="lamp red" id="lampCal"></span>
+        <button class="pushBtn amber" id="txCal" title="較正光を送信(最暗→基準→最明)"></button>
+        <span class="pbLabel">較正光</span></div>
+      <div class="pb"><span class="lamp red" id="lampStair"></span>
+        <button class="pushBtn red" id="txStair" title="階段信号を送信"></button>
+        <span class="pbLabel">階段信号</span></div>
+      <div class="pb"><span class="lamp red" id="lampMan"></span>
+        <button class="pushBtn red" id="txMan" title="手動レベルで発光"></button>
+        <span class="pbLabel">手動発光</span></div>
+      <div class="pb"><span class="lamp green" id="lampRx"></span>
+        <button class="pushBtn blue" id="rxKey" title="カメラ起動/停止"></button>
+        <span class="pbLabel">受 信</span></div>
+    </div>
+    <div class="meta" style="text-align:center">発光ウィンドウが開いていれば別窓で発光、なければ全画面発光(発光面のクリックで停止)。</div>
+    <div class="warnBox"><span class="warnTri">⚠</span>
+      <div><b>発光面を長時間直視しないでください。</b>
+      本テスターは定常輝度が主体ですが、較正光・階段信号の切り替わりは明滅を伴います。光の点滅に敏感な方はご注意ください。</div></div>
+  </section>
+
+  <!-- ============ 送信部 ============ -->
+  <section class="panel">
+    <p class="panelTitle">◤ 送信部 ── 輝度階調ジェネレータ</p>
+
+    <label>段階数(音域想定)── ダイヤルまたはランプ位置をクリック</label>
+    <div class="dialRow">
+      <div class="dial" id="stepDial"><div class="dialKnob" id="stepKnob"></div></div>
+      <div class="optLamps" id="stepOpts">
+        <div class="opt" data-v="13"><span class="lamp"></span><span class="optTxt">13段<br>1オクターブ</span></div>
+        <div class="opt" data-v="19"><span class="lamp"></span><span class="optTxt">19段<br>1.5オクターブ</span></div>
+        <div class="opt sel" data-v="26"><span class="lamp"></span><span class="optTxt">26段<br>25音+消灯</span></div>
+        <div class="opt" data-v="31"><span class="lamp"></span><span class="optTxt">31段<br>余裕確認</span></div>
+      </div>
+    </div>
+
+    <label>1段の保持時間</label>
+    <select id="stepMs">
+      <option value="400">400ms ── 高速掃引</option>
+      <option value="700" selected>700ms ── 標準</option>
+      <option value="1000">1000ms ── 確実</option>
+      <option value="1500">1500ms ── 遠距離・低fps</option>
+    </select>
+    <div class="check"><input type="checkbox" id="txLoop"><span>リピート送信(階段を繰り返し)</span></div>
+
+    <label>手動レベル ── <span id="manVal">50</span>%</label>
+    <input type="range" id="manLevel" min="0" max="100" value="50">
+
+    <label>送信時間(階段1周)</label>
+    <div class="bezel" style="margin-top:4px; padding:9px">
+      <div class="estRow">
+        <div class="nixie"><span class="nx" id="nxSteps">26</span><span class="nxUnit">STEP</span></div>
+        <div class="nixie"><span class="nx" id="nxTime">--.-</span><span class="nxUnit">SEC</span></div>
+      </div>
+    </div>
+
+    <details>
+      <summary>📡 送信側チェックリスト(距離を伸ばす)</summary>
+      <ul>
+        <li><b>画面輝度を最大</b>にし、<b>自動輝度をOFF</b>にする(ブラウザからは制御できません)</li>
+        <li><b>OLED端末が有利</b>:黒=画素消灯でコントラスト比がほぼ無限大。LCDは黒が浮くため不利</li>
+        <li>ダークモードの自動減光・省電力モード・ナイトシフトを切る</li>
+        <li>直射日光下は画面がコントラスト負けします。<b>夕方以降〜夜間が本領</b></li>
+        <li>画面を受信カメラへ正対させ、送信中は動かさない</li>
+      </ul>
+    </details>
+  </section>
+
+  <!-- ============ 受信部 ============ -->
+  <section class="panel">
+    <p class="panelTitle">◤ 受信部 ── 輝度計測・分解能判定</p>
+
+    <label>カメラモニタ(白枠=ROI ── ドラッグで移動)</label>
+    <div class="bezel">
+      <div class="crt">
+        <div id="camIdle">受信ボタンでカメラ起動</div>
+        <div id="camView" class="hidden">
+          <video id="video" autoplay playsinline muted></video>
+        </div>
+        <canvas id="roiCanvas" class="hidden"></canvas>
+      </div>
+    </div>
+
+    <label>ROIサイズ ── 発光面が枠内に収まるよう調整</label>
+    <input type="range" id="roiSize" min="4" max="60" value="20">
+    <label>カメラズーム(対応機種のみ)</label>
+    <input type="range" id="zoom" min="1" max="8" step="0.1" value="1" disabled>
+    <div class="small" id="camInfo"></div>
+
+    <label>輝度トレース(直近10秒 ── 較正後はレベル格子を重畳)</label>
+    <div class="bezel">
+      <canvas id="plot" width="680" height="200"></canvas>
+    </div>
+
+    <div class="bezel" style="margin-top:10px">
+      <div class="diag">
+        <div><span class="dv" id="dgFps">–</span><span class="dl">カメラFPS</span></div>
+        <div><span class="dv" id="dgCal">未較正</span><span class="dl">較正状態</span></div>
+        <div><span class="dv" id="dgPlat">–</span><span class="dl">プラトー検出</span></div>
+        <div><span class="dv" id="dgSigma">–</span><span class="dl">ノイズσ</span></div>
+      </div>
+    </div>
+
+    <label>判定 ── 実効分解能(6σ分離基準)/分離比(最小ギャップ÷σ)</label>
+    <div class="bezel" style="margin-top:4px; padding:9px">
+      <div class="estRow">
+        <div class="nixie"><span class="nx" id="nxNeff">--</span><span class="nxUnit">LEVELS</span></div>
+        <div class="nixie"><span class="nx" id="nxSep">--.-</span><span class="nxUnit">GAP/σ</span></div>
+      </div>
+    </div>
+
+    <div class="status"><span class="dot idle" id="stDot"></span><span id="stText">待機中</span></div>
+
+    <div class="btnRow">
+      <button class="btn" id="calBtn" disabled>較正キャプチャ</button>
+      <button class="btn" id="measBtn" disabled>計測開始</button>
+    </div>
+    <button class="btn stop" id="resetBtn">記録リセット</button>
+
+    <label>距離メモ(レポートに記録)</label>
+    <select id="distNote">
+      <option value="">未記入</option>
+      <option value="1m">1m</option><option value="2m">2m</option><option value="3m">3m</option>
+      <option value="5m">5m</option><option value="7m">7m</option>
+      <option value="10m" selected>10m</option>
+      <option value="15m">15m</option>
+    </select>
+
+    <div id="reports"></div>
+
+    <details>
+      <summary>📷 計測手順</summary>
+      <ol>
+        <li>送信端末:このページを開き<b>「較正光」</b>を押す(最暗2秒→基準2秒→最明2秒)</li>
+        <li>受信端末:<b>「受 信」</b>でカメラ起動、ROIを発光面に合わせる</li>
+        <li>較正光の発光中に<b>「較正キャプチャ」</b>を押す(8秒間自動記録→3点較正)</li>
+        <li>送信側で<b>「階段信号」</b>を送出、受信側で<b>「計測開始」</b></li>
+        <li>階段が終わったら<b>「計測停止」</b>。判定と紙テープレポートが出ます</li>
+        <li>判定の見方:<b>GAP/σ ≥ 6</b>なら設定段階数を確実に判別可能。LEVELSは較正レンジから逆算した理論上の最大判別段階数</li>
+      </ol>
+    </details>
+  </section>
+
+  <span class="manualLink" id="manualOpen">📖 取扱説明書 ── 別ウィンドウで開く</span>
+</main>
+</div>
+
+<div id="flash"><div id="flashInfo">送信準備中…</div></div>
+<div id="toast"></div>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+
+/* ---- トースト ---- */
+let toastTimer = null;
+function showHint(msg){
+  const t = $('toast');
+  t.textContent = msg; t.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.style.display = 'none', 2800);
+}
+
+/* ================================================================
+ * 送信部:輝度階調ジェネレータ
+ * レベルは画素値ドメイン(0..1 → rgb等分)。表示ガンマ・カメラガンマ込みの
+ * 伝送路全体を受信側の較正+実測で評価するのがテスターの役割。
+ * ================================================================ */
+let stepCount = 26;
+const STEP_VALUES = [13, 19, 26, 31];
+function setSteps(v){
+  stepCount = v;
+  const idx = Math.max(0, STEP_VALUES.indexOf(v));
+  $('stepKnob').style.transform = `rotate(${-45 + idx * 30}deg)`;
+  document.querySelectorAll('#stepOpts .opt').forEach(o => o.classList.toggle('sel', +o.dataset.v === v));
+  $('nxSteps').textContent = v;
+  updateEstimate();
+}
+document.querySelectorAll('#stepOpts .opt').forEach(o => o.addEventListener('click', () => setSteps(+o.dataset.v)));
+$('stepDial').onclick = () => {
+  const i = STEP_VALUES.indexOf(stepCount);
+  setSteps(STEP_VALUES[(i + 1) % STEP_VALUES.length]);
+};
+$('stepMs').addEventListener('change', updateEstimate);
+function updateEstimate(){
+  const secs = (stepCount * +$('stepMs').value + 2400) / 1000;
+  if (!txRunning) $('nxTime').textContent = secs >= 100 ? String(Math.round(secs)) : secs.toFixed(1);
+}
+$('manLevel').addEventListener('input', () => {
+  $('manVal').textContent = $('manLevel').value;
+  if (txMode === 'manual') setSurface(+$('manLevel').value / 100);
+});
+
+/* ---- 発光ウィンドウ(ポップアップ) ---- */
+let popWin = null;
+$('popOpen').onclick = () => {
+  if (popWin && !popWin.closed) { try { popWin.focus(); } catch(e){} return; }
+  popWin = window.open('', 'telephotoneTxWin',
+    'width=440,height=440,menubar=no,toolbar=no,location=no,status=no');
+  if (!popWin) { showHint('ポップアップがブロックされました。ブラウザの設定で許可してください'); return; }
+  const d = popWin.document;
+  d.open();
+  d.write('<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8">' +
+    '<title>Telephotone TPV-04 ── 発光ウィンドウ</title>' +
+    '<style>html,body{margin:0;height:100%;background:#000;cursor:pointer;font-family:monospace;}' +
+    '#i{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);color:#7a6a40;' +
+    'background:rgba(20,15,5,.8);padding:7px 16px;border-radius:18px;font-size:12px;' +
+    'white-space:nowrap;pointer-events:none;}</style></head>' +
+    '<body><div id="i">待機中 ── 較正光/階段信号/手動発光で発光開始</div></body></html>');
+  d.close();
+};
+setInterval(() => {
+  $('lampPop').classList.toggle('on', !!(popWin && !popWin.closed));
+}, 800);
+
+/* ---- 発光面制御 ---- */
+let txRunning = false, txMode = null, txRaf = null, wakeLockTx = null;
+let usePop = false, popBody = null, popInfo = null, popWatch = null;
+
+function levelColor(v){
+  const c = Math.round(Math.max(0, Math.min(1, v)) * 255);
+  return `rgb(${c},${c},${c})`;
+}
+function setSurface(v){
+  const c = levelColor(v);
+  if (usePop) { if (popBody) popBody.style.background = c; }
+  else $('flash').style.background = c;
+}
+function setInfo(show, txt){
+  const el = usePop ? popInfo : $('flashInfo');
+  if (!el) return;
+  el.style.display = show ? 'block' : 'none';
+  if (show && txt !== undefined) el.textContent = txt;
+}
+async function openSurface(){
+  usePop = !!(popWin && !popWin.closed);
+  if (usePop){
+    popBody = popWin.document.body;
+    popInfo = popWin.document.getElementById('i');
+    try { popWin.focus(); } catch(e){}
+    popBody.onclick = stopTx;
+    popWatch = setInterval(() => { if (popWin.closed && txRunning) stopTx(); }, 400);
+  } else {
+    $('flash').classList.add('on');
+    $('flash').onclick = stopTx;
+    try { await document.documentElement.requestFullscreen({ navigationUI: 'hide' }); } catch(e){}
+  }
+  try { wakeLockTx = await navigator.wakeLock?.request('screen'); } catch(e){}
+}
+function closeSurface(){
+  if (popWatch) { clearInterval(popWatch); popWatch = null; }
+  if (usePop){
+    if (popWin && !popWin.closed){
+      popBody.style.background = '#000';
+      setInfo(true, '停止しました ── 再送信できます');
+      popBody.onclick = null;
+    }
+  } else {
+    $('flash').classList.remove('on');
+    $('flash').style.background = '#000';
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    $('flash').onclick = null;
+  }
+  try { wakeLockTx?.release(); } catch(e){}
+}
+function stopTx(){
+  if (!txRunning) return;
+  txRunning = false; txMode = null;
+  const caf = usePop && popWin && !popWin.closed ? popWin.cancelAnimationFrame.bind(popWin) : cancelAnimationFrame;
+  try { caf(txRaf); } catch(e){}
+  closeSurface();
+  ['lampCal','lampStair','lampMan'].forEach(id => $(id).classList.remove('on'));
+  updateEstimate();
+}
+
+/* ---- シーケンス送信エンジン ---- */
+function buildCalibSeq(){
+  // 最暗 → 基準(50%) → 最明。各2秒。前後に黒。
+  return [
+    {v:0, ms:800, info:'較正光 ── 直視注意'},
+    {v:0,   ms:2000}, {v:0.5, ms:2000}, {v:1, ms:2000},
+    {v:0, ms:800}
+  ];
+}
+function buildStairSeq(n, stepMs){
+  const s = [{v:0, ms:1200, info:'階段信号 ── 直視注意'}];
+  for (let i = 0; i < n; i++) s.push({v: i / (n - 1), ms: stepMs});
+  s.push({v:0, ms:1200});
+  return s;
+}
+async function runSeq(seq, lampId, loop){
+  if (txRunning) stopTx();
+  txRunning = true; txMode = 'seq';
+  $(lampId).classList.add('on');
+  await openSurface();
+  const raf = usePop ? popWin.requestAnimationFrame.bind(popWin) : requestAnimationFrame;
+  // 区間累積時刻
+  const marks = []; let acc = 0;
+  for (const s of seq){ acc += s.ms; marks.push(acc); }
+  const total = acc;
+  const t0 = performance.now();
+  function frame(){
+    if (!txRunning) return;
+    if (usePop && popWin.closed) { stopTx(); return; }
+    let el = performance.now() - t0;
+    if (loop) el = el % total;
+    else if (el >= total) { stopTx(); return; }
+    let idx = 0;
+    while (idx < marks.length && el >= marks[idx]) idx++;
+    const seg = seq[Math.min(idx, seq.length - 1)];
+    setSurface(seg.v);
+    if (seg.info) setInfo(true, seg.info); else setInfo(false);
+    const rem = (total - el) / 1000;
+    $('nxTime').textContent = rem >= 100 ? String(Math.round(rem)) : rem.toFixed(1);
+    txRaf = raf(frame);
+  }
+  txRaf = raf(frame);
+}
+$('txCal').onclick = () => runSeq(buildCalibSeq(), 'lampCal', false);
+$('txStair').onclick = () => runSeq(buildStairSeq(stepCount, +$('stepMs').value), 'lampStair', $('txLoop').checked);
+$('txMan').onclick = async () => {
+  if (txRunning) { stopTx(); return; }
+  txRunning = true; txMode = 'manual';
+  $('lampMan').classList.add('on');
+  await openSurface();
+  setSurface(+$('manLevel').value / 100);
+  setInfo(true, '手動発光 ── クリックで停止');
+  setTimeout(() => { if (txMode === 'manual') setInfo(false); }, 2500);
+};
+
+/* ================================================================
+ * 受信部:輝度計測・較正・プラトー検出・分解能判定
+ * ================================================================ */
+let stream = null, track = null, rafId = null, wakeLockRx = null;
+let _fpsTimes = [];
+let roi = { x: 0.5, y: 0.5, size: 0.20 };
+const sampleCanvas = document.createElement('canvas');
+sampleCanvas.width = 8; sampleCanvas.height = 8;
+const sctx = sampleCanvas.getContext('2d', { willReadFrequently: true });
+
+/* ---- 較正状態 ---- */
+let calib = null;        // {lo, mid, hi, range, nMid, gamma}
+let calCapture = null;   // {samples:[], until}
+let meas = null;         // PlateauTracker(計測中)
+let measPlateaus = [];   // 確定プラトー
+const plotBuf = [];      // {t, l} 直近10秒
+
+/* ---- プラトー検出器 ---- */
+class PlateauTracker {
+  constructor(jumpThr){ this.jumpThr = jumpThr; this.cur = null; this.done = []; }
+  feed(t, l){
+    if (!this.cur){ this.cur = {sum:l, sum2:l*l, n:1, t0:t, t1:t}; return null; }
+    const mean = this.cur.sum / this.cur.n;
+    if (Math.abs(l - mean) > this.jumpThr){
+      const closed = this._close();
+      this.cur = {sum:l, sum2:l*l, n:1, t0:t, t1:t};
+      return closed;
+    }
+    this.cur.sum += l; this.cur.sum2 += l*l; this.cur.n++; this.cur.t1 = t;
+    return null;
+  }
+  _close(){
+    const c = this.cur; this.cur = null;
+    if (!c) return null;
+    const dur = c.t1 - c.t0;
+    if (dur < 320 || c.n < 6) return null;
+    const mean = c.sum / c.n;
+    const varc = Math.max(0, c.sum2 / c.n - mean * mean);
+    const p = {mean, std: Math.sqrt(varc), dur, n: c.n};
+    this.done.push(p);
+    return p;
+  }
+  finish(){ this._close(); return this.done; }
+}
+
+/* ---- カメラ ---- */
+$('rxKey').onclick = () => { if (stream) stopCamera(); else startCamera(); };
+
+async function startCamera(){
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    showHint('カメラAPIを使用できません。file://で開いている場合は https か localhost 経由で開いてください');
+    return;
+  }
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, frameRate: { ideal: 60 } },
+      audio: false
+    });
+  } catch(e){ showHint('カメラを起動できませんでした: ' + e.message); return; }
+  const video = $('video');
+  video.srcObject = stream;
+  track = stream.getVideoTracks()[0];
+  $('camView').classList.remove('hidden');
+  $('roiCanvas').classList.remove('hidden');
+  $('camIdle').classList.add('hidden');
+  $('lampRx').classList.add('on');
+  $('calBtn').disabled = false;
+  $('measBtn').disabled = false;
+  try { wakeLockRx = await navigator.wakeLock?.request('screen'); } catch(e){}
+  await new Promise(r => video.onloadedmetadata = r);
+  setupRoiCanvas();
+  applyCameraTuning();
+  startSampling();
+  setStatus('signal', 'カメラ動作中 ── ROIを発光面に合わせてください');
+}
+function stopCamera(){
+  stopSampling();
+  stream?.getTracks().forEach(t => t.stop());
+  stream = null; track = null;
+  $('camView').classList.add('hidden');
+  $('roiCanvas').classList.add('hidden');
+  $('camIdle').classList.remove('hidden');
+  $('lampRx').classList.remove('on');
+  $('calBtn').disabled = true;
+  $('measBtn').disabled = true;
+  if (meas) endMeasure(false);
+  calCapture = null;
+  try { wakeLockRx?.release(); } catch(e){}
+  setStatus('idle', '待機中');
+}
+
+/* ---- カメラ制御:AE/AWB/AF固定(LIDI規格 カメラ運用要件) ---- */
+async function applyCameraTuning(){
+  if (!track) return;
+  const caps = track.getCapabilities ? track.getCapabilities() : {};
+  const settings = track.getSettings ? track.getSettings() : {};
+  const notes = [`${settings.width || '?'}×${settings.height || '?'} @${settings.frameRate ? Math.round(settings.frameRate) : '?'}fps`];
+  // 露出
+  try {
+    if (caps.exposureMode && caps.exposureMode.includes('manual')){
+      const adv = { exposureMode: 'manual' };
+      if (caps.exposureTime){
+        const cur = settings.exposureTime;
+        adv.exposureTime = Math.max(caps.exposureTime.min, Math.min(caps.exposureTime.max, cur || caps.exposureTime.min * 4));
+      }
+      if (caps.iso) adv.iso = Math.max(caps.iso.min, Math.min(caps.iso.max, settings.iso || caps.iso.min));
+      await track.applyConstraints({ advanced: [adv] });
+      notes.push('露出固定:成功');
+    } else {
+      notes.push('露出固定:非対応 → 較正光でAE安定後にキャプチャするAEロック的運用で代替');
+    }
+  } catch(e){ notes.push('露出固定:失敗(較正で吸収)'); }
+  // ホワイトバランス
+  try {
+    if (caps.whiteBalanceMode && caps.whiteBalanceMode.includes('manual')){
+      await track.applyConstraints({ advanced: [{ whiteBalanceMode: 'manual' }] });
+      notes.push('WB固定:成功');
+    }
+  } catch(e){}
+  // フォーカス
+  try {
+    if (caps.focusMode && caps.focusMode.includes('manual')){
+      await track.applyConstraints({ advanced: [{ focusMode: 'manual' }] });
+      notes.push('AF固定:成功');
+    }
+  } catch(e){}
+  // ズーム
+  const z = $('zoom');
+  if (caps.zoom && caps.zoom.max > caps.zoom.min){
+    z.min = caps.zoom.min; z.max = caps.zoom.max;
+    z.step = caps.zoom.step || 0.1; z.value = settings.zoom || caps.zoom.min;
+    z.disabled = false;
+    z.oninput = () => track.applyConstraints({ advanced: [{ zoom: +z.value }] }).catch(() => {});
+  } else { z.disabled = true; notes.push('ズーム:非対応'); }
+  $('camInfo').textContent = notes.join(' / ');
+}
+
+/* ---- ROI ---- */
+let roiReady = false;
+function setupRoiCanvas(){
+  if (roiReady) return;
+  roiReady = true;
+  const rc = $('roiCanvas');
+  function resize(){
+    rc.width = rc.clientWidth * devicePixelRatio;
+    rc.height = rc.clientHeight * devicePixelRatio;
+  }
+  resize();
+  new ResizeObserver(resize).observe(rc);
+  let dragging = false;
+  const pos = ev => {
+    const r = rc.getBoundingClientRect();
+    const p = ev.touches ? ev.touches[0] : ev;
+    return { x: (p.clientX - r.left) / r.width, y: (p.clientY - r.top) / r.height };
+  };
+  const down = ev => { dragging = true; move(ev); ev.preventDefault(); };
+  const move = ev => {
+    if (!dragging) return;
+    const p = pos(ev);
+    roi.x = Math.max(0.05, Math.min(0.95, p.x));
+    roi.y = Math.max(0.05, Math.min(0.95, p.y));
+    ev.preventDefault();
+  };
+  const up = () => dragging = false;
+  rc.addEventListener('pointerdown', down);
+  rc.addEventListener('pointermove', move);
+  rc.addEventListener('pointerup', up);
+  rc.addEventListener('pointercancel', up);
+  $('roiSize').oninput = () => roi.size = +$('roiSize').value / 100;
+  roi.size = +$('roiSize').value / 100;
+}
+function drawRoiOverlay(luma){
+  const rc = $('roiCanvas');
+  const ctx = rc.getContext('2d');
+  ctx.clearRect(0, 0, rc.width, rc.height);
+  const w = rc.width, h = rc.height;
+  const s = roi.size * Math.min(w, h);
+  const x = roi.x * w - s / 2, y = roi.y * h - s / 2;
+  ctx.strokeStyle = meas ? '#7dff8a' : '#a8ffc0';
+  ctx.lineWidth = 2 * devicePixelRatio;
+  ctx.strokeRect(x, y, s, s);
+  ctx.fillStyle = 'rgba(138,255,168,.9)';
+  ctx.font = `${11 * devicePixelRatio}px monospace`;
+  const ty = y - 6 * devicePixelRatio < 10 ? y + s + 14 * devicePixelRatio : y - 6 * devicePixelRatio;
+  ctx.fillText(`輝度 ${luma.toFixed(1)}`, x + 4 * devicePixelRatio, ty);
+}
+
+/* ---- 輝度サンプリング ---- */
+function sampleLuma(video){
+  const vw = video.videoWidth, vh = video.videoHeight;
+  if (!vw) return null;
+  const cw = video.clientWidth || vw, ch = video.clientHeight || vh;
+  const scale = Math.max(cw / vw, ch / vh);
+  const dw = cw / scale, dh = ch / scale;
+  const ox = (vw - dw) / 2, oy = (vh - dh) / 2;
+  const s = roi.size * Math.min(dw, dh);
+  const sx = Math.max(0, ox + roi.x * dw - s / 2), sy = Math.max(0, oy + roi.y * dh - s / 2);
+  sctx.drawImage(video, sx, sy, s, s, 0, 0, 8, 8);
+  const d = sctx.getImageData(0, 0, 8, 8).data;
+  let sum = 0;
+  for (let i = 0; i < d.length; i += 4) sum += 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+  return sum / 64;
+}
+function startSampling(){
+  const video = $('video');
+  const usingRVFC = 'requestVideoFrameCallback' in HTMLVideoElement.prototype;
+  const onFrame = () => {
+    if (!stream) return;
+    const t = performance.now();
+    _fpsTimes.push(t);
+    while (_fpsTimes.length && t - _fpsTimes[0] > 1000) _fpsTimes.shift();
+    const luma = sampleLuma(video);
+    if (luma !== null){
+      plotBuf.push({ t, l: luma });
+      while (plotBuf.length && t - plotBuf[0].t > 10000) plotBuf.shift();
+      if (calCapture){
+        calCapture.samples.push({ t, l: luma });
+        if (t >= calCapture.until) finishCalib();
+      }
+      if (meas){
+        const closed = meas.feed(t, luma);
+        if (closed){ measPlateaus.push(closed); updateLiveStats(); }
+      }
+      drawRoiOverlay(luma);
+      drawPlot();
+      updateDiag();
+    }
+    if (usingRVFC) video.requestVideoFrameCallback(onFrame);
+    else rafId = requestAnimationFrame(onFrame);
+  };
+  if (usingRVFC) video.requestVideoFrameCallback(onFrame);
+  else rafId = requestAnimationFrame(onFrame);
+}
+function stopSampling(){ if (rafId) cancelAnimationFrame(rafId); rafId = null; }
+
+/* ---- 較正キャプチャ(8秒 → 3プラトー抽出) ---- */
+$('calBtn').onclick = () => {
+  if (calCapture) return;
+  calCapture = { samples: [], until: performance.now() + 8000 };
+  $('calBtn').textContent = '較正記録中…';
+  $('calBtn').disabled = true;
+  setStatus('rx', '較正キャプチャ中(8秒)── 送信側は較正光を発光してください');
+};
+function finishCalib(){
+  const samples = calCapture.samples;
+  calCapture = null;
+  $('calBtn').textContent = '較正キャプチャ';
+  $('calBtn').disabled = false;
+  let mn = Infinity, mx = -Infinity;
+  for (const s of samples){ if (s.l < mn) mn = s.l; if (s.l > mx) mx = s.l; }
+  if (mx - mn < 12){
+    showHint('較正失敗:輝度変化が検出できません(コントラスト不足)。ROI・距離・画面輝度を確認してください');
+    setStatus('signal', 'カメラ動作中 ── 較正やり直し');
+    return;
+  }
+  const tracker = new PlateauTracker(Math.max(6, (mx - mn) * 0.15));
+  for (const s of samples) tracker.feed(s.t, s.l);
+  const plats = tracker.finish().filter(p => p.dur >= 600);
+  if (plats.length < 3){
+    showHint(`較正失敗:プラトーが${plats.length}個しか取れません。較正光の発光中に押してください`);
+    setStatus('signal', 'カメラ動作中 ── 較正やり直し');
+    return;
+  }
+  // 長い順に3つ → 輝度順に 最暗/基準/最明
+  const three = [...plats].sort((a, b) => b.dur - a.dur).slice(0, 3).sort((a, b) => a.mean - b.mean);
+  const lo = three[0].mean, mid = three[1].mean, hi = three[2].mean;
+  const range = hi - lo;
+  const nMid = (mid - lo) / range;
+  const gamma = (nMid > 0 && nMid < 1) ? Math.log(0.5) / Math.log(nMid) : 1;
+  calib = { lo, mid, hi, range, nMid, gamma };
+  $('dgCal').textContent = 'OK';
+  $('dgCal').className = 'dv good';
+  showHint(`較正完了:最暗${lo.toFixed(1)} / 基準${mid.toFixed(1)} / 最明${hi.toFixed(1)}(レンジ${range.toFixed(1)}・中点実測${nMid.toFixed(2)})`);
+  setStatus('signal', `較正完了 ── レンジ${range.toFixed(1)} / 実効γ≈${gamma.toFixed(2)}`);
+  updateLiveStats();
+}
+
+/* ---- 計測 ---- */
+$('measBtn').onclick = () => { if (meas) endMeasure(true); else startMeasure(); };
+function startMeasure(){
+  const range = calib ? calib.range : 255;
+  const jumpThr = Math.max(2.5, range / (stepCount - 1) / 2.2);
+  meas = new PlateauTracker(jumpThr);
+  measPlateaus = [];
+  $('measBtn').textContent = '計測停止';
+  setStatus('rx', `計測中 ── 送信側の階段信号を待っています(段差検出しきい値 ${jumpThr.toFixed(1)})`);
+}
+function endMeasure(report){
+  const closed = meas.finish();
+  meas = null;
+  measPlateaus = closed;
+  $('measBtn').textContent = '計測開始';
+  const st = computeStats();
+  updateLiveStats();
+  if (report && st) printReport(st);
+  else if (report) showHint('プラトーが2個未満です。階段信号の送出中に計測してください');
+  setStatus('signal', 'カメラ動作中');
+}
+$('resetBtn').onclick = () => {
+  measPlateaus = [];
+  if (meas){ meas = null; $('measBtn').textContent = '計測開始'; }
+  calib = null;
+  $('dgCal').textContent = '未較正';
+  $('dgCal').className = 'dv';
+  $('nxNeff').textContent = '--';
+  $('nxSep').textContent = '--.-';
+  $('reports').innerHTML = '';
+  updateLiveStats();
+  showHint('記録をリセットしました');
+};
+
+/* ---- 統計・判定 ---- */
+function median(arr){
+  if (!arr.length) return 0;
+  const s = [...arr].sort((a, b) => a - b);
+  return s[s.length >> 1];
+}
+function computeStats(){
+  const ps = measPlateaus.filter(p => p.dur >= 320);
+  if (ps.length < 2) return null;
+  const means = ps.map(p => p.mean);
+  const range = calib ? calib.range : (Math.max(...means) - Math.min(...means));
+  const sigma = median(ps.map(p => p.std));
+  const gaps = [];
+  for (let i = 1; i < ps.length; i++){
+    const d = ps[i].mean - ps[i - 1].mean;
+    if (d > 0 && d < range * 0.6) gaps.push(d);
+  }
+  const minGap = gaps.length ? Math.min(...gaps) : null;
+  const sep = (minGap !== null && sigma > 0) ? minGap / sigma : null;
+  const nEff = sigma > 0 ? Math.max(1, Math.floor(range / (6 * sigma)) + 1) : 999;
+  return { count: ps.length, range, sigma, minGap, sep, nEff, plateaus: ps };
+}
+function updateLiveStats(){
+  $('dgPlat').textContent = measPlateaus.length || '–';
+  const st = computeStats();
+  if (!st){
+    $('dgSigma').textContent = '–';
+    return;
+  }
+  $('dgSigma').textContent = st.sigma.toFixed(2);
+  $('dgSigma').className = 'dv ' + (st.sigma < 1.5 ? 'good' : st.sigma < 4 ? 'warn' : 'bad');
+  $('nxNeff').textContent = st.nEff >= 999 ? '∞' : String(st.nEff);
+  $('nxSep').textContent = st.sep === null ? '--.-' : (st.sep >= 100 ? String(Math.round(st.sep)) : st.sep.toFixed(1));
+}
+function verdictOf(st){
+  const n = st.nEff;
+  if (n >= 26) return { cls:'ok',  txt:'◎ 26状態(25音=2オクターブ+消灯)可' };
+  if (n >= 19) return { cls:'mid', txt:`○ ${n}段階 ── 1.5オクターブ相当まで妥協可` };
+  if (n >= 13) return { cls:'mid', txt:`△ ${n}段階 ── 1オクターブ相当` };
+  return { cls:'bad', txt:`× ${n}段階 ── 距離短縮/露出・ROI見直しが必要` };
+}
+function printReport(st){
+  const v = verdictOf(st);
+  const div = document.createElement('div');
+  div.className = 'tape';
+  const head = document.createElement('div');
+  head.className = 'head';
+  head.textContent = `LIDI 分解能計測レポート ── TPV-04 / 設定${stepCount}段 / 距離:${$('distNote').value || '未記入'}`;
+  div.appendChild(head);
+  const tbl = document.createElement('table');
+  const rows = [
+    ['プラトー検出数', String(st.count)],
+    ['輝度レンジ', st.range.toFixed(1)],
+    ['ノイズσ(中央値)', st.sigma.toFixed(2)],
+    ['最小段差ギャップ', st.minGap === null ? '-' : st.minGap.toFixed(2)],
+    ['分離比(ギャップ/σ)', st.sep === null ? '-' : st.sep.toFixed(1) + (st.sep >= 6 ? ' ≥6 合格' : ' <6 不足')],
+    ['実効分解能(6σ基準)', st.nEff >= 999 ? '∞' : `${st.nEff} 段階`],
+  ];
+  for (const [k, val] of rows){
+    const tr = document.createElement('tr');
+    const th = document.createElement('td'); th.textContent = k; th.style.textAlign = 'left';
+    const td = document.createElement('td'); td.textContent = val;
+    tr.appendChild(th); tr.appendChild(td); tbl.appendChild(tr);
+  }
+  div.appendChild(tbl);
+  const vd = document.createElement('div');
+  vd.className = 'verdict ' + v.cls;
+  vd.textContent = v.txt;
+  div.appendChild(vd);
+  const time = document.createElement('div');
+  time.className = 'time';
+  time.textContent = new Date().toLocaleString('ja-JP') + (calib ? ` ・ 較正γ≈${calib.gamma.toFixed(2)}` : ' ・ 未較正');
+  div.appendChild(time);
+  $('reports').prepend(div);
+}
+
+/* ---- トレース描画 ---- */
+function drawPlot(){
+  const cv = $('plot'), ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  ctx.fillStyle = '#0d1408'; ctx.fillRect(0, 0, W, H);
+  if (plotBuf.length < 2) return;
+  const t1 = plotBuf[plotBuf.length - 1].t, t0 = t1 - 10000;
+  const X = t => (t - t0) / 10000 * W;
+  const Y = l => H - 4 - (l / 255) * (H - 8);
+  // 較正後:レベル格子(段階数分)
+  if (calib){
+    ctx.strokeStyle = '#1a3018'; ctx.lineWidth = 1;
+    for (let i = 0; i < stepCount; i++){
+      const l = calib.lo + calib.range * i / (stepCount - 1);
+      ctx.beginPath(); ctx.moveTo(0, Y(l)); ctx.lineTo(W, Y(l)); ctx.stroke();
+    }
+    ctx.strokeStyle = '#2f5d2c'; ctx.setLineDash([4, 4]);
+    for (const l of [calib.lo, calib.hi]){
+      ctx.beginPath(); ctx.moveTo(0, Y(l)); ctx.lineTo(W, Y(l)); ctx.stroke();
+    }
+    ctx.setLineDash([]);
+  }
+  // 輝度トレース
+  ctx.strokeStyle = '#4dff7a'; ctx.lineWidth = 2;
+  ctx.shadowColor = 'rgba(77,255,122,.5)'; ctx.shadowBlur = 4;
+  ctx.beginPath();
+  let first = true;
+  for (const s of plotBuf){
+    const x = X(s.t), y = Y(s.l);
+    if (first){ ctx.moveTo(x, y); first = false; } else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  // 走査線
+  ctx.fillStyle = 'rgba(0,0,0,.35)';
+  for (let y = 0; y < H; y += 3) ctx.fillRect(0, y, W, 1);
+}
+
+/* ---- 診断・状態 ---- */
+function updateDiag(){
+  $('dgFps').textContent = _fpsTimes.length;
+  $('dgFps').className = 'dv ' + (_fpsTimes.length >= 25 ? 'good' : 'warn');
+}
+function setStatus(cls, txt){
+  const dot = $('stDot');
+  dot.className = 'dot ' + cls;
+  $('stText').textContent = txt;
+}
+
+/* ---- 取扱説明書 ---- */
+$('manualOpen').onclick = () => {
+  const w = window.open('', 'tpv04Manual', 'width=560,height=720,menubar=no,toolbar=no,location=no');
+  if (!w) { showHint('ポップアップがブロックされました'); return; }
+  const d = w.document;
+  d.open();
+  d.write(`<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8">
+<title>Telephotone TPV-04 取扱説明書(輝度階調テスター編)</title>
+<style>
+body{font-family:"Courier New","Osaka-Mono","MS Gothic",monospace; background:#e8dfc0; color:#3a3020;
+  margin:0; padding:28px 26px; line-height:1.9; font-size:13px;}
+h1{font-size:17px; letter-spacing:3px; border-bottom:3px double #8a7a58; padding-bottom:8px;}
+h2{font-size:14px; letter-spacing:2px; margin-top:26px; border-left:5px solid #8a7a58; padding-left:8px;}
+.plate{border:1px solid #8a7a58; padding:10px 14px; text-align:center; margin:14px 0; background:#f2ecd8;}
+ol,ul{padding-left:20px;}
+li{margin:4px 0;}
+b{color:#8a1d10;}
+.foot{margin-top:30px; font-size:11px; color:#8a7a58; border-top:1px solid #b5a888; padding-top:8px;}
+</style></head><body>
+<h1>取扱説明書 ── Telephotone 輝度階調テスター</h1>
+<div class="plate">Telephotone 　テレフォトン<br>型式:TPV-04<br>TELEPHONOVISION('26年製)</div>
+<p>本機は、画面の発光の強さ(輝度)で音高を伝送する可視光楽器「Telephotone」の開発工程1にあたる計測ユニットです。
+本機を含む Telephotone の演奏層・制御層プロトコル一式は <b>LIDI規格(Light Instrument Digital Interface)</b> に準拠します。</p>
+<h2>一、本機の目的</h2>
+<p>送信画面の輝度階調が、距離をへだてた受信カメラで何段階まで判別できるか(実効分解能)を実測します。
+目標音域は2オクターブ=25音+消灯の26状態。実測結果に応じて音域の妥協ラインを数字で確定します。</p>
+<h2>二、計測手順</h2>
+<ol>
+<li>送信端末・受信端末それぞれで本ページを開く(https経由)</li>
+<li>送信側:画面輝度を最大、自動輝度をOFFにする</li>
+<li>送信側:「較正光」を押す ── 最暗2秒→基準2秒→最明2秒の順に発光</li>
+<li>受信側:「受信」でカメラを起動し、白枠(ROI)を発光面に合わせる</li>
+<li>受信側:較正光の発光中に「較正キャプチャ」を押す(8秒間の自動記録から3点較正)</li>
+<li>送信側:「階段信号」を送出(段階数・保持時間は設定に従う)</li>
+<li>受信側:「計測開始」→ 階段終了後「計測停止」で判定が印字されます</li>
+</ol>
+<h2>三、判定の見方</h2>
+<ul>
+<li><b>ノイズσ</b>:各段の保持中の輝度ゆらぎ(中央値)。小さいほど良い</li>
+<li><b>分離比(GAP/σ)</b>:隣接段の最小間隔÷σ。<b>6以上</b>なら設定段階数を確実に判別可能</li>
+<li><b>実効分解能(LEVELS)</b>:較正レンジを6σ間隔で割った理論上の最大判別段階数。26以上で2オクターブ運用可</li>
+</ul>
+<h2>四、較正について</h2>
+<p>本機は演奏前の多点キャリブレーション(最暗・基準・最明)を規格の中核とします。カメラのガンマ(非線形)込みで
+輝度スケール全体のマッピングを構築し、音高割当は較正後の軸上で行います。露出の完全マニュアルに非対応の機種
+(iOS Safari等)では、較正光でAEが安定した時点の値を基準とするAEロック的運用で代替します。</p>
+<h2>五、安全上の注意</h2>
+<p><b>発光面を長時間直視しないでください。</b>本機は定常輝度が主体ですが、較正光・階段信号・将来の制御層
+(モールス点滅コマンド)は明滅を伴います。光の点滅に敏感な方は発作等を誘発するおそれがあります。</p>
+<div class="foot">TELEPHONOVISION 機材シリーズ ── TPV-03「MABATAKI SIGNAL」/ TPV-04「Telephotone」<br>
+本機はLIDI規格に準拠しています。</div>
+</body></html>`);
+  d.close();
+};
+
+/* ---- 初期化 ---- */
+setSteps(26);
+updateEstimate();
+})();
+</script>
+</body>
+</html>
