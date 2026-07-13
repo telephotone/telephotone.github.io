@@ -380,6 +380,13 @@
           <span class="fnLbl">TRANSMIT</span><span class="fnSub">PERFORM</span></span></button>
       </div>
 
+      <label>Scale ── pitch alphabet (match with RX)</label>
+      <select id="txScaleSel">
+        <option value="0" selected>CHROMA 25 ── FULL RANGE</option>
+        <option value="1">DIATONIC 15 ── WIDE GAP</option>
+        <option value="2">PENTA 11 ── WIDEST GAP</option>
+      </select>
+
       <label>Output Monitor</label>
       <div class="lcdRow">
         <div class="lcd"><span class="v" id="nxTxNote">---</span><span class="k">Note</span></div>
@@ -483,6 +490,12 @@
             <option value="2" selected>2 NORMAL</option>
             <option value="3">3 STABLE</option>
           </select></div>
+        <div><span class="lbl">Scale (match with TX)</span>
+          <select id="rxScaleSel">
+            <option value="0" selected>CHROMA 25</option>
+            <option value="1">DIATONIC 15</option>
+            <option value="2">PENTA 11</option>
+          </select></div>
       </div>
       <div class="setGrid" style="margin-top:4px">
         <div><span class="lbl">Volume</span><input type="range" id="rxVol" min="0" max="100" value="70"></div>
@@ -497,6 +510,7 @@
           <li>Keep only the emitting surface inside the ROI; fix the camera on a tripod</li>
           <li>Re-capture calibration whenever lighting conditions change</li>
           <li>Camera requires https (or localhost)</li>
+          <li><b>Tough conditions: set Scale to DIATONIC 15 or PENTA 11 on both TX and RX</b> ── level gaps widen 1.7×/2.3× while keeping the full 2-octave range</li>
           <li><b>iPhone: turn OFF the side silent switch</b> ── Web Audio is muted while the ringer is silenced</li>
         </ul>
       </details>
@@ -541,17 +555,23 @@ const $ = id => document.getElementById(id);
  * べき乗ガンマモデルで期待輝度を構築し最近傍判別する。
  * 基準A = A4(440Hz)= state 10 = v 0.40 ── 較正光の中間点そのもの。
  * ================================================================ */
-const N_NOTES = 25;
-const STATE_OFF = 0;
-const A_STATE = 10;
 const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
-function stateToV(s){ return s / N_NOTES; }
-function stateName(s){
-  const semi = s - 1;
-  return NOTE_NAMES[semi % 12] + (4 + Math.floor(semi / 12));
-}
-function stateFreq(s, trans){
-  const midi = 60 + (s - 1) + (trans || 0);
+/* 音高アルファベット(スケールモード)── 段数を減らして隣接ギャップを拡大する。
+ * 音域2オクターブは全モードで維持:キーを減らすのではなく「使う音を選ぶ」。
+ *   CHROMA 25   : 25段(ギャップ=レンジの4.0%)
+ *   DIATONIC 15 : 15段(6.7% ── 約1.7倍)
+ *   PENTA 11    : 11段(9.1% ── 約2.3倍)
+ * 送信側と受信側で同じモードに合わせること。 */
+const SCALES = [
+  { name:'CHROMA 25',   semis: Array.from({length:25}, (_, i) => i) },
+  { name:'DIATONIC 15', semis: [0,2,4,5,7,9,11,12,14,16,17,19,21,23,24] },
+  { name:'PENTA 11',    semis: [0,2,4,7,9,12,14,16,19,21,24] },
+];
+const CAL_V = 0.4;   // 較正光の中間点=基準A(A4)の発光画素値(全モード共通)
+let txScale = 0, rxScale = 0;
+function semiName(semi){ return NOTE_NAMES[semi % 12] + (4 + Math.floor(semi / 12)); }
+function semiFreq(semi, trans){
+  const midi = 60 + semi + (trans || 0);
   return 440 * Math.pow(2, (midi - 69) / 12);
 }
 
@@ -650,7 +670,7 @@ $('pwrSw').addEventListener('change', () => {
     if (txArmed) disarmTx();
     if (calRunning) stopCalTx();
     heldStack = [];
-    txSetState(STATE_OFF);
+    txSetSemi(-1);
     if (stream) stopCamera();
     txVoice.noteOff(); rxVoice.noteOff();
     $('camIdle').textContent = 'RECEIVE READY';
@@ -764,7 +784,7 @@ function buildKeyboard(el, interactive){
     if (interactive){
       const lb = document.createElement('span');
       lb.className = 'kbLabel';
-      lb.textContent = stateName(semi + 1);
+      lb.textContent = semiName(semi);
       k.appendChild(lb);
     }
     el.appendChild(k);
@@ -792,40 +812,46 @@ document.querySelector('.noteScreen').parentNode.insertBefore(kbRxWrap, document
 const kbRxKeys = buildKeyboard(kbRxWrap, false);
 kbRxWrap.style.pointerEvents = 'none';
 
-/* ---- 送信演奏状態(単音・後着優先) ---- */
+/* ---- 送信演奏状態(単音・後着優先/semi基準・スケール対応) ---- */
 let txArmed = false;
-let heldStack = [];
-let curTxState = STATE_OFF;
-function txSetState(s){
-  if (s === curTxState) return;
-  curTxState = s;
-  setSurface(stateToV(s));
-  if (s === STATE_OFF){
+let heldStack = [];          // 押下中のsemi(後着優先)
+let curTxSemi = -1;          // -1 = 消灯
+function txSetSemi(semi){
+  if (semi === curTxSemi) return;
+  curTxSemi = semi;
+  const sc = SCALES[txScale];
+  if (semi < 0){
+    setSurface(0);
     $('nxTxNote').textContent = '---';
     $('nxTxLevel').textContent = '--';
     $('nxTxPct').textContent = '---';
     if ($('txMonitor').checked) txVoice.noteOff();
   } else {
-    $('nxTxNote').textContent = stateName(s);
-    $('nxTxLevel').textContent = String(s);
-    $('nxTxPct').textContent = Math.round(stateToV(s) * 100);
-    if ($('txMonitor').checked) txVoice.noteOn(stateFreq(s, 0));
+    const lvl = sc.semis.indexOf(semi) + 1;
+    const v = lvl / sc.semis.length;
+    setSurface(v);
+    $('nxTxNote').textContent = semiName(semi);
+    $('nxTxLevel').textContent = `${lvl}`;
+    $('nxTxPct').textContent = Math.round(v * 100);
+    if ($('txMonitor').checked) txVoice.noteOn(semiFreq(semi, 0));
   }
-  for (const semi in kbMainKeys) kbMainKeys[semi].classList.toggle('down', +semi === s - 1);
+  for (const s in kbMainKeys) kbMainKeys[s].classList.toggle('down', +s === semi);
 }
 function noteDown(semi){
   if (needPower()) return;
   if (player.running) stopPlayer();   // 手動演奏が自動演奏に割り込んだら停止
-  const s = semi + 1;
-  if (!heldStack.includes(s)) heldStack.push(s);
+  if (SCALES[txScale].semis.indexOf(semi) < 0){
+    showHint('KEY NOT IN CURRENT SCALE (' + SCALES[txScale].name + ')');
+    return;
+  }
+  if (!heldStack.includes(semi)) heldStack.push(semi);
   txVoice.ensure();
   if (!txArmed){ showHint('SET TRANSMIT ON TO EMIT LIGHT (MONITOR TONE ONLY)'); }
-  txSetState(heldStack[heldStack.length - 1]);
+  txSetSemi(heldStack[heldStack.length - 1]);
 }
 function noteUp(semi){
-  const s = semi + 1;
-  heldStack = heldStack.filter(x => x !== s);
-  txSetState(heldStack.length ? heldStack[heldStack.length - 1] : STATE_OFF);
+  heldStack = heldStack.filter(x => x !== semi);
+  txSetSemi(heldStack.length ? heldStack[heldStack.length - 1] : -1);
 }
 (function bindKb(){
   const el = $('kbMain');
@@ -953,7 +979,7 @@ $('txKey').onclick = async () => {
     setPopInfo('');
   }
   try { wakeLockTx = await navigator.wakeLock?.request('screen'); } catch(e){}
-  txSetState(STATE_OFF);
+  txSetSemi(-1);
   setSurface(0);
 };
 
@@ -970,7 +996,7 @@ $('txCal').onclick = async () => {
     try { await document.documentElement.requestFullscreen({ navigationUI: 'hide' }); } catch(e){}
   }
   const seq = [
-    {v:0, ms:800}, {v:0, ms:2000}, {v:stateToV(A_STATE), ms:2000}, {v:1, ms:2000}, {v:0, ms:600}
+    {v:0, ms:800}, {v:0, ms:2000}, {v:CAL_V, ms:2000}, {v:1, ms:2000}, {v:0, ms:600}
   ];
   const marks = []; let acc = 0;
   for (const s of seq){ acc += s.ms; marks.push(acc); }
@@ -1016,66 +1042,84 @@ const sampleCanvas = document.createElement('canvas');
 sampleCanvas.width = 8; sampleCanvas.height = 8;
 const sctx = sampleCanvas.getContext('2d', { willReadFrequently: true });
 
-let calib = null;
+let calib = null;            // {lo, midA, hi, expected[]}
 let calCapture = null;
-let rxState = STATE_OFF;
-let candState = STATE_OFF, candCount = 0;
+let rxState = 0;             // 確定レベル(0=消灯)
+let rxSemi = -1;             // 確定semi
+let candState = 0, candCount = 0;
+let driftFrames = 0;
 
 $('rxTone').onchange = () => rxVoice.setTone(+$('rxTone').value);
 $('rxVol').oninput = () => rxVoice.setVolume(+$('rxVol').value / 100);
-$('rxMute').onchange = () => { if ($('rxMute').checked) rxVoice.noteOff(); else if (rxState !== STATE_OFF) rxPlay(rxState); };
-$('rxTrans').onchange = () => { if (rxState !== STATE_OFF && !$('rxMute').checked) rxPlay(rxState); };
+$('rxMute').onchange = () => { if ($('rxMute').checked) rxVoice.noteOff(); else if (rxSemi >= 0) rxPlay(rxSemi); };
+$('rxTrans').onchange = () => { if (rxSemi >= 0 && !$('rxMute').checked) rxPlay(rxSemi); };
 rxVoice.setVolume(0.7);
 
-/* ---- 3点較正 → 26状態の期待輝度テーブル(べき乗ガンマモデル) ----
- * L(v) = lo + (hi-lo)·v^γ。γは基準A点(v=0.4)の実測から推定:
- * γ = ln(nMid)/ln(0.4)。区分線形より系統誤差が1桁以上小さい(模擬検証済み)。 */
+function rxN(){ return SCALES[rxScale].semis.length; }
+
+/* ---- 3点較正 → (N+1)状態の期待輝度テーブル(べき乗ガンマモデル) ----
+ * L(v) = lo + (hi-lo)·v^γ。γは基準A点(v=CAL_V)の実測から推定。
+ * Nはスケールモードの段数 ── 段数が少ないほど隣接ギャップが広がり誤判別に強い。 */
 function buildExpected(lo, midA, hi){
-  const vMid = stateToV(A_STATE);
   const nMid = (midA - lo) / (hi - lo);
-  const gamma = (nMid > 0 && nMid < 1) ? Math.log(nMid) / Math.log(vMid) : 1;
+  const gamma = (nMid > 0 && nMid < 1) ? Math.log(nMid) / Math.log(CAL_V) : 1;
+  const N = rxN();
   const exp = [];
-  for (let s = 0; s <= N_NOTES; s++)
-    exp.push(lo + (hi - lo) * Math.pow(stateToV(s), gamma));
+  for (let s = 0; s <= N; s++)
+    exp.push(lo + (hi - lo) * Math.pow(s / N, gamma));
   return exp;
 }
 function classify(l){
   const exp = calib.expected;
+  const N = exp.length - 1;
   let best = 0, bd = Infinity;
-  for (let s = 0; s <= N_NOTES; s++){
+  for (let s = 0; s <= N; s++){
     const d = Math.abs(l - exp[s]);
     if (d < bd){ bd = d; best = s; }
   }
   let gap = Infinity;
   if (best > 0) gap = Math.min(gap, exp[best] - exp[best - 1]);
-  if (best < N_NOTES) gap = Math.min(gap, exp[best + 1] - exp[best]);
+  if (best < N) gap = Math.min(gap, exp[best + 1] - exp[best]);
   const conf = gap > 0 ? 1 - (bd / (gap / 2)) : 0;
   return { state: best, conf: Math.max(0, Math.min(1, conf)) };
 }
+/* スケール切替時:較正済みなら期待テーブルを組み直す */
+$('rxScaleSel').addEventListener('change', () => {
+  rxScale = +$('rxScaleSel').value;
+  if (calib) calib.expected = buildExpected(calib.lo, calib.midA, calib.hi);
+  candState = 0; candCount = 0;
+  commitState(0);
+});
+$('txScaleSel').addEventListener('change', () => {
+  txScale = +$('txScaleSel').value;
+  heldStack = [];
+  txSetSemi(-1);
+});
 
 /* ---- 発音制御 ---- */
-function rxPlay(s){
+function rxPlay(semi){
   rxVoice.setTone(+$('rxTone').value);
-  rxVoice.noteOn(stateFreq(s, +$('rxTrans').value));
+  rxVoice.noteOn(semiFreq(semi, +$('rxTrans').value));
 }
 function commitState(s){
   if (s === rxState) return;
   rxState = s;
+  rxSemi = s > 0 ? SCALES[rxScale].semis[s - 1] : -1;
   const noteEl = $('rxNote');
-  if (s === STATE_OFF){
+  if (s === 0){
     noteEl.textContent = '──';
     noteEl.classList.add('off');
     $('rxSub').innerHTML = 'KEY OFF<br>&nbsp;';
     if (!$('rxMute').checked) rxVoice.noteOff();
   } else {
     const trans = +$('rxTrans').value;
-    noteEl.textContent = stateName(s);
+    noteEl.textContent = semiName(rxSemi);
     noteEl.classList.remove('off');
-    const f = stateFreq(s, trans);
-    $('rxSub').innerHTML = `${f.toFixed(1)} Hz${trans ? ` (T${trans > 0 ? '+' : ''}${trans})` : ''}<br>LEVEL ${s}/25`;
-    if (!$('rxMute').checked) rxPlay(s);
+    const f = semiFreq(rxSemi, trans);
+    $('rxSub').innerHTML = `${f.toFixed(1)} Hz${trans ? ` (T${trans > 0 ? '+' : ''}${trans})` : ''}<br>LEVEL ${s}/${rxN()}`;
+    if (!$('rxMute').checked) rxPlay(rxSemi);
   }
-  for (const semi in kbRxKeys) kbRxKeys[semi].classList.toggle('lit', +semi === s - 1);
+  for (const semi in kbRxKeys) kbRxKeys[semi].classList.toggle('lit', +semi === rxSemi);
 }
 
 /* ---- カメラ ---- */
@@ -1125,7 +1169,7 @@ function stopCamera(){
   $('camIdle').style.display = 'flex';
   $('rxKey').classList.remove('lit');
   calCapture = null;
-  commitState(STATE_OFF);
+  commitState(0);
   try { wakeLockRx?.release(); } catch(e){}
   sysInfo = '';
   setStatus('', powered ? 'SYSTEM READY ── PRESS RECEIVE TO BECOME A RECEIVER' : '');
@@ -1214,7 +1258,7 @@ function drawRoiOverlay(luma){
   const w = rc.width, h = rc.height;
   const s = roi.size * Math.min(w, h);
   const x = roi.x * w - s / 2, y = roi.y * h - s / 2;
-  ctx.strokeStyle = rxState !== STATE_OFF ? '#71f0a0' : '#e8e6e0';
+  ctx.strokeStyle = rxState !== 0 ? '#71f0a0' : '#e8e6e0';
   ctx.lineWidth = 1.5 * devicePixelRatio;
   ctx.strokeRect(x, y, s, s);
   ctx.fillStyle = 'rgba(232,230,224,.9)';
@@ -1239,6 +1283,15 @@ function sampleLuma(video){
   for (let i = 0; i < d.length; i += 4) sum += 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
   return sum / 64;
 }
+/* 3フレーム中央値 ── 単発ノイズ(手ブレ・圧縮ゆらぎ)を除去。遅延は1フレームのみ */
+const _medBuf = [];
+function median3(x){
+  _medBuf.push(x);
+  if (_medBuf.length > 3) _medBuf.shift();
+  if (_medBuf.length < 3) return x;
+  const [a, b, c] = _medBuf;
+  return Math.max(Math.min(a, b), Math.min(Math.max(a, b), c));
+}
 function startSampling(){
   const video = $('video');
   const usingRVFC = 'requestVideoFrameCallback' in HTMLVideoElement.prototype;
@@ -1247,17 +1300,29 @@ function startSampling(){
     const t = performance.now();
     _fpsTimes.push(t);
     while (_fpsTimes.length && t - _fpsTimes[0] > 1000) _fpsTimes.shift();
-    const luma = sampleLuma(video);
-    if (luma !== null){
+    const raw = sampleLuma(video);
+    if (raw !== null){
+      const luma = median3(raw);
       if (calCapture){
-        calCapture.samples.push({ t, l: luma });
+        calCapture.samples.push({ t, l: raw });
         if (t >= calCapture.until) finishCalib();
       } else if (calib){
         const { state, conf } = classify(luma);
         const need = +$('stableN').value;
         if (state === candState) candCount++;
-        else { candState = state; candCount = 1; }
-        if (candCount >= need) commitState(state);
+        else if (conf >= 0.20){ candState = state; candCount = 1; }
+        // ↑信号余裕ゲート:境界ぎわの低確度フレームは新候補になれない(誤発音抑制)
+        if (candCount >= need) commitState(candState);
+        // 消灯アンカーの自動ドリフト補正:キーオフ中の暗レベルを緩やかに追尾し
+        // 部屋の明るさ変化・AEの微動を吸収する(リピートキャリブレーションの簡易形)
+        if (state === 0 && rxState === 0){
+          const gap0 = calib.expected[1] - calib.expected[0];
+          if (Math.abs(luma - calib.lo) < gap0 * 0.6){
+            calib.lo += (luma - calib.lo) * 0.02;
+            if (++driftFrames % 30 === 0)
+              calib.expected = buildExpected(calib.lo, calib.midA, calib.hi);
+          }
+        }
         $('dgLevel').textContent = state === 0 ? 'OFF' : state;
         const pct = Math.round(conf * 100);
         $('dgConf').textContent = pct;
@@ -1314,7 +1379,7 @@ $('calBtn').onclick = () => {
   }
   calCapture = { samples: [], until: performance.now() + 8000 };
   $('calBtn').classList.add('lit');
-  commitState(STATE_OFF);
+  commitState(0);
   setStatus('rx', 'CAPTURING CAL (8S) ── EMIT CAL LIGHT FROM TRANSMITTER');
 };
 function finishCalib(){
@@ -1339,7 +1404,7 @@ function finishCalib(){
   const three = [...plats].sort((a, b) => b.dur - a.dur).slice(0, 3).sort((a, b) => a.mean - b.mean);
   const lo = three[0].mean, midA = three[1].mean, hi = three[2].mean;
   calib = { lo, midA, hi, expected: buildExpected(lo, midA, hi) };
-  candState = STATE_OFF; candCount = 0;
+  candState = 0; candCount = 0;
   $('dgCal').textContent = 'OK';
   $('dgCal').className = 'v good';
   showHint(`CAL OK ── DARK ${lo.toFixed(1)} / REF-A ${midA.toFixed(1)} / BRIGHT ${hi.toFixed(1)}`);
@@ -1470,7 +1535,7 @@ function stopPlayer(){
   player.timers.forEach(clearTimeout);
   player.timers = [];
   $('playKey').classList.remove('lit');
-  txSetState(STATE_OFF);
+  txSetSemi(-1);
 }
 function startPlayer(){
   const tune = TUNES[+$('tuneSel').value];
@@ -1482,8 +1547,8 @@ function startPlayer(){
     if (semi >= 0){
       // 同音連打の再打鍵ギャップは最小限(拍感を崩さない)
       const gap = Math.min(55, dur * 0.12);
-      player.timers.push(setTimeout(() => { if (player.running) txSetState(semi + 1); }, t));
-      player.timers.push(setTimeout(() => { if (player.running) txSetState(STATE_OFF); }, t + dur - gap));
+      player.timers.push(setTimeout(() => { if (player.running) txSetSemi(semi); }, t));
+      player.timers.push(setTimeout(() => { if (player.running) txSetSemi(-1); }, t + dur - gap));
     }
     t += dur;
   }
@@ -1498,6 +1563,7 @@ function startPlayer(){
 $('playKey').onclick = () => {
   if (needPower()) return;
   if (player.running){ stopPlayer(); return; }
+  if (txScale !== 0){ showHint('AUTO PLAY REQUIRES SCALE: CHROMA 25'); return; }
   txVoice.ensure();
   if (!txArmed) showHint('TRANSMIT IS OFF ── MONITOR TONE ONLY');
   startPlayer();
@@ -1541,7 +1607,7 @@ function makeRoller(sel){
   dn.onclick = () => step(1);
   render();
 }
-['tuneSel', 'rxId', 'rxTone', 'rxTrans', 'stableN'].forEach(id => makeRoller($(id)));
+['tuneSel', 'txScaleSel', 'rxId', 'rxTone', 'rxTrans', 'stableN', 'rxScaleSel'].forEach(id => makeRoller($(id)));
 
 /* ---- 筐体色の切り替え(ライト/ダークの比較用) ---- */
 $('themeToggle').onclick = () => {
