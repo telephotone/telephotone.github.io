@@ -92,6 +92,20 @@
   /* ---------- モジュール共通 ---------- */
   .deck{display:grid; grid-template-columns:1fr 1fr; }
   @media (max-width:720px){ .deck{grid-template-columns:1fr;} .mod+.mod{border-left:none !important; border-top:1px solid var(--line);} }
+  /* 狭幅(スマホ):主電源が右端で見切れないように詰める */
+  @media (max-width:560px){
+    .topbar{padding:14px 14px 12px; gap:10px;}
+    .brand{min-width:0;}
+    .brand .wordmark{font-size:15px; letter-spacing:.22em; white-space:nowrap;}
+    .brand .wordmarkJp{font-size:10px; letter-spacing:.1em;}
+    .brand .sub{font-size:8px; letter-spacing:.12em;}
+    .power{flex:none; gap:8px; margin-right:4px;}
+    .pwrLbl{font-size:8.5px; letter-spacing:.18em;}
+    .pwrLbl b{font-size:10px; letter-spacing:.2em;}
+    .pwrSw{width:52px;}
+    .sysbar, .mod, .keybed{padding-left:14px; padding-right:14px;}
+    .warnStrip, .footer{padding-left:14px; padding-right:14px;}
+  }
   .mod{padding:18px 26px 22px; min-width:0;}
   .mod+.mod{border-left:1px solid var(--line);}
   .modHead{display:flex; align-items:baseline; gap:10px; margin-bottom:14px;}
