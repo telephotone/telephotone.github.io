@@ -389,7 +389,7 @@
           <span class="led" id="lampPop"></span>
           <span class="dial"><span class="dOff">OFF</span><span class="knob"></span><span class="dOn">ON</span></span>
           <span class="fnLbl">WINDOW</span><span class="fnSub">EMIT SURFACE</span></span></button>
-        <button class="fnKey" id="txCal" title="Send calibration light (dark → ref-A → bright)"><span class="cap">
+        <button class="fnKey" id="txCal" title="Send full-scale calibration light (all levels, staircase)"><span class="cap">
           <span class="led" id="lampCal"></span>
           <span class="dial"><span class="dOff">OFF</span><span class="knob"></span><span class="dOn">ON</span></span>
           <span class="fnLbl">CAL LIGHT</span><span class="fnSub">CALIBRATION</span></span></button>
@@ -445,7 +445,7 @@
           <span class="led" id="lampRx"></span>
           <span class="dial"><span class="dOff">OFF</span><span class="knob"></span><span class="dOn">ON</span></span>
           <span class="fnLbl">RECEIVE</span><span class="fnSub">CAMERA</span></span></button>
-        <button class="fnKey" id="calBtn" title="Turn ON while cal light is emitting (8s auto capture)"><span class="cap">
+        <button class="fnKey" id="calBtn" title="Turn ON first, then start CAL LIGHT on the transmitter"><span class="cap">
           <span class="led" id="lampCalRx"></span>
           <span class="dial"><span class="dOff">OFF</span><span class="knob"></span><span class="dOn">ON</span></span>
           <span class="fnLbl">CAPTURE</span><span class="fnSub">CALIBRATION</span></span></button>
@@ -527,7 +527,7 @@
           <li>Multiple receivers on one light: set Transpose A=±0 / B=+4 / C=+7 for a major triad from a single note</li>
           <li>Tens-of-ms timing spread between devices is embraced as ensemble looseness</li>
           <li>Keep only the emitting surface inside the ROI; fix the camera on a tripod</li>
-          <li>Re-capture calibration whenever lighting conditions change</li>
+          <li>Calibration order: turn CAPTURE ON first (RX), then CAL LIGHT ON (TX). Re-capture whenever lighting changes</li>
           <li>Camera requires https (or localhost)</li>
           <li><b>Tough conditions: set Scale to DIATONIC 8 or PENTA 6 on both TX and RX</b> ── level gaps widen 1.6×/2.2× within the 1-octave range</li>
           <li><b>iPhone: turn OFF the side silent switch</b> ── Web Audio is muted while the ringer is silenced</li>
@@ -586,7 +586,6 @@ const SCALES = [
   { name:'DIATONIC 8', semis: [0,2,4,5,7,9,11,12] },
   { name:'PENTA 6',    semis: [0,2,4,7,9,12] },
 ];
-const CAL_V = 0.4;   // 較正光の中間点(レンジ40%の基準光)── ガンマ推定のアンカー
 let txScale = 0, rxScale = 0;
 function semiName(semi){ return NOTE_NAMES[semi % 12] + (4 + Math.floor(semi / 12)); }
 function semiFreq(semi, trans){
@@ -1014,9 +1013,11 @@ $('txCal').onclick = async () => {
     $('flash').onclick = stopCalTx;
     try { await document.documentElement.requestFullscreen({ navigationUI: 'hide' }); } catch(e){}
   }
-  const seq = [
-    {v:0, ms:800}, {v:0, ms:2000}, {v:CAL_V, ms:2000}, {v:1, ms:2000}, {v:0, ms:600}
-  ];
+  // 全段キャリブレーション:全音高レベルを1段ずつ実測させる(黒→各段1.1秒→黒)
+  const N = SCALES[txScale].semis.length;
+  const seq = [{v:0, ms:800}];
+  for (let i = 0; i <= N; i++) seq.push({v: i / N, ms: 1100});
+  seq.push({v:0, ms:600});
   const marks = []; let acc = 0;
   for (const s of seq){ acc += s.ms; marks.push(acc); }
   const t0 = performance.now();
@@ -1061,7 +1062,7 @@ const sampleCanvas = document.createElement('canvas');
 sampleCanvas.width = 8; sampleCanvas.height = 8;
 const sctx = sampleCanvas.getContext('2d', { willReadFrequently: true });
 
-let calib = null;            // {lo, midA, hi, expected[]}
+let calib = null;            // {lo, hi, expected[]} ── expectedは全段実測値
 let calCapture = null;
 let rxState = 0;             // 確定レベル(0=消灯)
 let rxSemi = -1;             // 確定semi
@@ -1076,18 +1077,7 @@ rxVoice.setVolume(0.7);
 
 function rxN(){ return SCALES[rxScale].semis.length; }
 
-/* ---- 3点較正 → (N+1)状態の期待輝度テーブル(べき乗ガンマモデル) ----
- * L(v) = lo + (hi-lo)·v^γ。γは基準光(40%)点(v=CAL_V)の実測から推定。
- * Nはスケールモードの段数 ── 段数が少ないほど隣接ギャップが広がり誤判別に強い。 */
-function buildExpected(lo, midA, hi){
-  const nMid = (midA - lo) / (hi - lo);
-  const gamma = (nMid > 0 && nMid < 1) ? Math.log(nMid) / Math.log(CAL_V) : 1;
-  const N = rxN();
-  const exp = [];
-  for (let s = 0; s <= N; s++)
-    exp.push(lo + (hi - lo) * Math.pow(s / N, gamma));
-  return exp;
-}
+/* 期待輝度テーブルは全段実測(finishCalib)で構築する ── モデル近似なし */
 function classify(l){
   const exp = calib.expected;
   const N = exp.length - 1;
@@ -1105,7 +1095,12 @@ function classify(l){
 /* スケール切替時:較正済みなら期待テーブルを組み直す */
 $('rxScaleSel').addEventListener('change', () => {
   rxScale = +$('rxScaleSel').value;
-  if (calib) calib.expected = buildExpected(calib.lo, calib.midA, calib.hi);
+  if (calib){
+    calib = null;                       // 実測テーブルは段数に紐づくため無効化
+    $('dgCal').textContent = 'RAW';
+    $('dgCal').className = 'v dim';
+    showHint('SCALE CHANGED ── RECAPTURE CALIBRATION');
+  }
   candState = 0; candCount = 0;
   commitState(0);
 });
@@ -1332,14 +1327,15 @@ function startSampling(){
         else if (conf >= 0.20){ candState = state; candCount = 1; }
         // ↑信号余裕ゲート:境界ぎわの低確度フレームは新候補になれない(誤発音抑制)
         if (candCount >= need) commitState(candState);
-        // 消灯アンカーの自動ドリフト補正:キーオフ中の暗レベルを緩やかに追尾し
-        // 部屋の明るさ変化・AEの微動を吸収する(リピートキャリブレーションの簡易形)
+        // 消灯アンカーの自動ドリフト補正:環境光の変化は全段にほぼ加算的に乗るため
+        // キーオフ中の暗レベル差分でテーブル全体を平行移動する(リピートキャリブレーションの簡易形)
         if (state === 0 && rxState === 0){
           const gap0 = calib.expected[1] - calib.expected[0];
-          if (Math.abs(luma - calib.lo) < gap0 * 0.6){
-            calib.lo += (luma - calib.lo) * 0.02;
-            if (++driftFrames % 30 === 0)
-              calib.expected = buildExpected(calib.lo, calib.midA, calib.hi);
+          const d = luma - calib.expected[0];
+          if (Math.abs(d) < gap0 * 0.6){
+            const shift = d * 0.02;
+            for (let i = 0; i < calib.expected.length; i++) calib.expected[i] += shift;
+            calib.lo = calib.expected[0];
           }
         }
         $('dgLevel').textContent = state === 0 ? 'OFF' : state;
@@ -1396,38 +1392,59 @@ $('calBtn').onclick = () => {
     setStatus('signal', 'CAPTURE ABORTED');
     return;
   }
-  calCapture = { samples: [], until: performance.now() + 8000 };
+  const capMs = (rxN() + 1) * 1100 + 3000;
+  calCapture = { samples: [], until: performance.now() + capMs };
   $('calBtn').classList.add('lit');
   commitState(0);
-  setStatus('rx', 'CAPTURING CAL (8S) ── EMIT CAL LIGHT FROM TRANSMITTER');
+  setStatus('rx', `CAPTURING FULL-SCALE CAL (${Math.round(capMs/1000)}S) ── NOW START CAL LIGHT ON TX`);
 };
 function finishCalib(){
   const samples = calCapture.samples;
   calCapture = null;
   $('calBtn').classList.remove('lit');
+  const N = rxN();
   let mn = Infinity, mx = -Infinity;
-  for (const s of samples){ if (s.l < mn) mn = s.l; if (s.l > mx) mx = s.l; }
+  for (const sm of samples){ if (sm.l < mn) mn = sm.l; if (sm.l > mx) mx = sm.l; }
   if (mx - mn < 12){
     showHint('CAL FAILED ── NO LUMINANCE CHANGE. CHECK ROI / DISTANCE / BRIGHTNESS');
     setStatus('signal', 'CAMERA ACTIVE ── RETRY CALIBRATION');
     return;
   }
-  const tracker = new PlateauTracker(Math.max(6, (mx - mn) * 0.15));
-  for (const s of samples) tracker.feed(s.t, s.l);
-  const plats = tracker.finish().filter(p => p.dur >= 600);
-  if (plats.length < 3){
-    showHint(`CAL FAILED ── ONLY ${plats.length} PLATEAUS. CAPTURE WHILE CAL LIGHT IS EMITTING`);
+  // 階段の各段をプラトーとして抽出(段差しきい値=想定段差の半分)
+  const tracker = new PlateauTracker(Math.max(3, (mx - mn) / N / 2));
+  for (const sm of samples) tracker.feed(sm.t, sm.l);
+  let plats = tracker.finish().filter(pp => pp.dur >= 500);
+  // 時系列で上昇している区間のみ採用(末尾の黒などを落とす)
+  const asc = [];
+  for (const pp of plats){
+    if (asc.length === 0 || pp.mean > asc[asc.length - 1].mean) asc.push(pp);
+    else break;
+  }
+  if (asc.length !== N + 1){
+    showHint(`CAL FAILED ── GOT ${asc.length}/${N + 1} LEVELS. START CAPTURE FIRST, THEN CAL LIGHT (MATCH SCALE ON BOTH)`);
     setStatus('signal', 'CAMERA ACTIVE ── RETRY CALIBRATION');
     return;
   }
-  const three = [...plats].sort((a, b) => b.dur - a.dur).slice(0, 3).sort((a, b) => a.mean - b.mean);
-  const lo = three[0].mean, midA = three[1].mean, hi = three[2].mean;
-  calib = { lo, midA, hi, expected: buildExpected(lo, midA, hi) };
-  candState = 0; candCount = 0;
-  $('dgCal').textContent = 'OK';
-  $('dgCal').className = 'v good';
-  showHint(`CAL OK ── DARK ${lo.toFixed(1)} / REF40 ${midA.toFixed(1)} / BRIGHT ${hi.toFixed(1)}`);
-  setStatus('signal', `CAL OK ── READY TO RECEIVE (RANGE ${(hi - lo).toFixed(1)})`);
+  // 期待値=実測値:モデル誤差ゼロの全段テーブル
+  calib = { expected: asc.map(pp => pp.mean), lo: asc[0].mean, hi: asc[N].mean };
+  candState = 0; candCount = 0; driftFrames = 0;
+  // 較正品質の自動診断:最小段差ギャップ÷ノイズσ(テスターと同じ思想)
+  const stds = asc.map(pp => pp.std).sort((a, b) => a - b);
+  const sigma = stds[stds.length >> 1];
+  let minGap = Infinity;
+  for (let i = 1; i < asc.length; i++) minGap = Math.min(minGap, asc[i].mean - asc[i - 1].mean);
+  const sep = sigma > 0 ? minGap / sigma : Infinity;
+  if (sep < 4){
+    $('dgCal').textContent = 'POOR';
+    $('dgCal').className = 'v warn';
+    showHint(`CAL OK BUT LOW SEPARATION (GAP/σ=${sep.toFixed(1)}) ── TRY DIATONIC/PENTA, CLOSER, OR TIGHTER ROI`);
+    setStatus('signal', `CAL MARGINAL ── GAP/σ=${sep.toFixed(1)} (WANT ≥4)`);
+  } else {
+    $('dgCal').textContent = 'OK';
+    $('dgCal').className = 'v good';
+    showHint(`CAL OK ── ${N + 1} LEVELS / GAP/σ=${sep === Infinity ? '∞' : sep.toFixed(1)}`);
+    setStatus('signal', `CAL OK ── READY TO RECEIVE (${N + 1} LEVELS / GAP/σ=${sep === Infinity ? '∞' : sep.toFixed(1)})`);
+  }
 }
 
 /* ---- 取扱説明書 ---- */
@@ -1468,7 +1485,7 @@ td,th{border:1px solid #c9c7bf; padding:4px 12px; text-align:left;}
 <h2>三、演奏手順</h2>
 <ol>
 <li><b>送信側:</b>主電源を入れ「発光窓」を開き、受信カメラへ正対。画面輝度は最大・自動輝度OFF</li>
-<li><b>送信側:</b>「較正光」を送る(最暗2秒→基準光(40%) 2秒→最明2秒)</li>
+<li><b>受信側:</b>「受信」でカメラ起動、白枠(ROI)を発光面に合わせ「較正取込(CAPTURE)」を先に入れる</li>
 <li><b>受信側:</b>主電源を入れ「受信」でカメラ起動、白枠(ROI)を発光面に合わせ、較正光の発光中に「較正取込」</li>
 <li><b>送信側:</b>「演奏送信(TRANSMIT)」を入にして鍵盤を弾く(PCキー:下段ZXC…/上段Q2W…)</li>
 <li><b>受信側:</b>音が鳴り、音名と鍵盤ハイライトが表示されます</li>
@@ -1489,10 +1506,11 @@ td,th{border:1px solid #c9c7bf; padding:4px 12px; text-align:left;}
 端末A=原音、B=+4、C=+7 とすれば送信1音から長三和音(平行和声・オルガヌム的)。
 端末ごとの数十msの発音ばらつきは、アンサンブルの自然な揺らぎとして許容する設計です。</p>
 <h2>六、較正について</h2>
-<p>演奏前の多点キャリブレーション(最暗・基準光(40%)・最明)で、カメラのガンマ込みの輝度マッピングを構築します。
-基準光(40%)の光はちょうどA4(440Hz)のレベルです。露出の完全マニュアルに非対応の機種(iOS Safari等)では、
-較正光でAEが安定した時点の値を基準とするAEロック的運用で代替します。
-照明条件が変わったら較正をやり直してください。</p>
+<p>演奏前の<b>全段キャリブレーション</b>で、全音高レベルを1段ずつ実際に発光・実測し、
+期待値テーブルを実測値そのもので構築します(モデル近似なし)。カメラのガンマや画面の階調特性の癖も
+すべて実測に織り込まれます。手順は受信側CAPTURE→送信側CAL LIGHTの順。送受のスケール設定を
+一致させてください。露出の完全マニュアルに非対応の機種(iOS Safari等)では、較正中にAEが安定した状態の
+値がそのまま基準になります。照明条件が変わったら較正をやり直してください。</p>
 <h2>七、安全上の注意</h2>
 <p><b>発光面を長時間直視しないでください。</b>演奏中は定常輝度が主体ですが、較正光および将来の制御層
 (モールス点滅コマンド)は明滅を伴います。光の点滅に敏感な方は発作等を誘発するおそれがあります。</p>
