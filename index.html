@@ -663,6 +663,12 @@ function bootSequence(){
   });
   at(tEnd + 1300, () => {
     booting = false;
+    // 起動チャイム ── iOS等で音声系が生きているかの確認を兼ねる(鳴らなければ音声の問題)
+    try {
+      rxVoice.setTone(0);
+      rxVoice.noteOn(880);
+      setTimeout(() => rxVoice.noteOff(), 180);
+    } catch(e){}
     $('camIdle').textContent = 'RECEIVE READY';
     $('rxNote').textContent = '──';
     $('rxNote').classList.add('off');
@@ -1144,7 +1150,7 @@ $('rxKey').onclick = () => {
   if (stream) stopCamera(); else startCamera();
 };
 /* iOS Safari対策:通電中は任意のタッチ/クリックで suspended を解除し続ける */
-['pointerdown', 'touchend'].forEach(ev =>
+['pointerdown', 'touchstart', 'touchend', 'keydown'].forEach(ev =>
   document.addEventListener(ev, () => {
     if (powered){ txVoice.ensure(); rxVoice.ensure(); }
   }, { passive: true }));
