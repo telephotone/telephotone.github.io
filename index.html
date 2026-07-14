@@ -401,9 +401,9 @@
 
       <label>Scale ── pitch alphabet (match with RX)</label>
       <select id="txScaleSel">
-        <option value="0" selected>CHROMA 25 ── FULL RANGE</option>
-        <option value="1">DIATONIC 15 ── WIDE GAP</option>
-        <option value="2">PENTA 11 ── WIDEST GAP</option>
+        <option value="0" selected>CHROMA 13 ── FULL RANGE</option>
+        <option value="1">DIATONIC 8 ── WIDE GAP</option>
+        <option value="2">PENTA 6 ── WIDEST GAP</option>
       </select>
 
       <label>Output Monitor</label>
@@ -420,8 +420,8 @@
       <div class="autoRow">
         <div style="flex:1; min-width:0">
           <select id="tuneSel">
-            <option value="0">TRISTESSE OP.10-3 ── CHOPIN</option>
-            <option value="1">JESU, JOY BWV147 ── J.S.BACH</option>
+            <option value="0">ODE TO JOY ── BEETHOVEN</option>
+            <option value="1">TWINKLE ── TRAD./MOZART VAR.</option>
           </select>
         </div>
         <button class="fnKey" id="playKey" style="flex:none; width:104px; min-width:0"
@@ -511,9 +511,9 @@
           </select></div>
         <div><span class="lbl">Scale (match with TX)</span>
           <select id="rxScaleSel">
-            <option value="0" selected>CHROMA 25</option>
-            <option value="1">DIATONIC 15</option>
-            <option value="2">PENTA 11</option>
+            <option value="0" selected>CHROMA 13</option>
+            <option value="1">DIATONIC 8</option>
+            <option value="2">PENTA 6</option>
           </select></div>
       </div>
       <div class="setGrid" style="margin-top:4px">
@@ -529,7 +529,7 @@
           <li>Keep only the emitting surface inside the ROI; fix the camera on a tripod</li>
           <li>Re-capture calibration whenever lighting conditions change</li>
           <li>Camera requires https (or localhost)</li>
-          <li><b>Tough conditions: set Scale to DIATONIC 15 or PENTA 11 on both TX and RX</b> ── level gaps widen 1.7×/2.3× while keeping the full 2-octave range</li>
+          <li><b>Tough conditions: set Scale to DIATONIC 8 or PENTA 6 on both TX and RX</b> ── level gaps widen 1.6×/2.2× within the 1-octave range</li>
           <li><b>iPhone: turn OFF the side silent switch</b> ── Web Audio is muted while the ringer is silenced</li>
         </ul>
       </details>
@@ -543,8 +543,8 @@
   <!-- ================= 鍵盤(最下段) ================= -->
   <div class="keybed">
     <div class="keybedHead">
-      <span class="lbl" style="margin:0">Keybed ── C4–C6 · 25 keys · monophonic (last-note priority)</span>
-      <span class="lbl" style="margin:0">PC: Z S X D C … / Q 2 W 3 E …</span>
+      <span class="lbl" style="margin:0">Keybed ── C4–C5 · 13 keys · monophonic (last-note priority)</span>
+      <span class="lbl" style="margin:0">PC: Z S X D C V G B H N J M ,</span>
     </div>
     <div class="kbWrap" id="kbMain"></div>
   </div>
@@ -570,23 +570,23 @@ const $ = id => document.getElementById(id);
 /* ================================================================
  * LIDI規格 演奏層 ── 共通定義
  * 26状態:state 0 = 消灯(キーオフ) / state 1..25 = C4..C6
- * 発光画素値 v = state/25(等分)。受信側は3点較正(最暗/基準A/最明)から
+ * 発光画素値 v = state/25(等分)。受信側は3点較正(最暗/基準光(40%)/最明)から
  * べき乗ガンマモデルで期待輝度を構築し最近傍判別する。
- * 基準A = A4(440Hz)= state 10 = v 0.40 ── 較正光の中間点そのもの。
+ * 基準光(40%) = A4(440Hz)= state 10 = v 0.40 ── 較正光の中間点そのもの。
  * ================================================================ */
 const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
-/* 音高アルファベット(スケールモード)── 段数を減らして隣接ギャップを拡大する。
- * 音域2オクターブは全モードで維持:キーを減らすのではなく「使う音を選ぶ」。
- *   CHROMA 25   : 25段(ギャップ=レンジの4.0%)
- *   DIATONIC 15 : 15段(6.7% ── 約1.7倍)
- *   PENTA 11    : 11段(9.1% ── 約2.3倍)
+/* 音高アルファベット(スケールモード)── 音域は1オクターブ(C4〜C5)。
+ * 実地検証の結果、2オクターブ(25段)は環境依存が大きく1オクターブに確定。
+ *   CHROMA 13   : 13段(ギャップ=レンジの7.7%)
+ *   DIATONIC 8  : 8段(12.5% ── 約1.6倍)
+ *   PENTA 6     : 6段(16.7% ── 約2.2倍)
  * 送信側と受信側で同じモードに合わせること。 */
 const SCALES = [
-  { name:'CHROMA 25',   semis: Array.from({length:25}, (_, i) => i) },
-  { name:'DIATONIC 15', semis: [0,2,4,5,7,9,11,12,14,16,17,19,21,23,24] },
-  { name:'PENTA 11',    semis: [0,2,4,7,9,12,14,16,19,21,24] },
+  { name:'CHROMA 13',  semis: Array.from({length:13}, (_, i) => i) },
+  { name:'DIATONIC 8', semis: [0,2,4,5,7,9,11,12] },
+  { name:'PENTA 6',    semis: [0,2,4,7,9,12] },
 ];
-const CAL_V = 0.4;   // 較正光の中間点=基準A(A4)の発光画素値(全モード共通)
+const CAL_V = 0.4;   // 較正光の中間点(レンジ40%の基準光)── ガンマ推定のアンカー
 let txScale = 0, rxScale = 0;
 function semiName(semi){ return NOTE_NAMES[semi % 12] + (4 + Math.floor(semi / 12)); }
 function semiFreq(semi, trans){
@@ -788,9 +788,9 @@ const rxVoice = makeVoice();
 /* ================================================================
  * 鍵盤UI(送信25鍵+受信ハイライト用ミニ25鍵)
  * ================================================================ */
-const WHITE_SEMIS = [0,2,4,5,7,9,11,12,14,16,17,19,21,23,24];
-const BLACK_SEMIS = [1,3,6,8,10,13,15,18,20,22];
-const BLACK_AFTER = [0,1,3,4,5,7,8,10,11,12];
+const WHITE_SEMIS = [0,2,4,5,7,9,11,12];
+const BLACK_SEMIS = [1,3,6,8,10];
+const BLACK_AFTER = [0,1,3,4,5];
 function buildKeyboard(el, interactive){
   const nW = WHITE_SEMIS.length;
   const keys = {};
@@ -909,7 +909,7 @@ function noteUp(semi){
 })();
 const KEYMAP = {
   'z':0,'s':1,'x':2,'d':3,'c':4,'v':5,'g':6,'b':7,'h':8,'n':9,'j':10,'m':11,',':12,
-  'q':12,'2':13,'w':14,'3':15,'e':16,'r':17,'5':18,'t':19,'6':20,'y':21,'7':22,'u':23,'i':24
+  'q':0,'2':1,'w':2,'3':3,'e':4,'r':5,'5':6,'t':7,'6':8,'y':9,'7':10,'u':11,'i':12
 };
 const kbDownSet = new Set();
 window.addEventListener('keydown', ev => {
@@ -1002,7 +1002,7 @@ $('txKey').onclick = async () => {
   setSurface(0);
 };
 
-/* ---- 較正光(最暗 → 基準A(v=0.4) → 最明 ── 各2秒) ---- */
+/* ---- 較正光(最暗 → 基準光(40%)(v=0.4) → 最明 ── 各2秒) ---- */
 let calRunning = false, calRaf = null;
 $('txCal').onclick = async () => {
   if (needPower()) return;
@@ -1077,7 +1077,7 @@ rxVoice.setVolume(0.7);
 function rxN(){ return SCALES[rxScale].semis.length; }
 
 /* ---- 3点較正 → (N+1)状態の期待輝度テーブル(べき乗ガンマモデル) ----
- * L(v) = lo + (hi-lo)·v^γ。γは基準A点(v=CAL_V)の実測から推定。
+ * L(v) = lo + (hi-lo)·v^γ。γは基準光(40%)点(v=CAL_V)の実測から推定。
  * Nはスケールモードの段数 ── 段数が少ないほど隣接ギャップが広がり誤判別に強い。 */
 function buildExpected(lo, midA, hi){
   const nMid = (midA - lo) / (hi - lo);
@@ -1359,7 +1359,7 @@ function startSampling(){
 }
 function stopSampling(){ if (rafId) cancelAnimationFrame(rafId); rafId = null; }
 
-/* ---- 較正取込(8秒 → 3プラトー ── 最暗/基準A/最明) ---- */
+/* ---- 較正取込(8秒 → 3プラトー ── 最暗/基準光(40%)/最明) ---- */
 class PlateauTracker {
   constructor(jumpThr){ this.jumpThr = jumpThr; this.cur = null; this.done = []; }
   feed(t, l){
@@ -1426,7 +1426,7 @@ function finishCalib(){
   candState = 0; candCount = 0;
   $('dgCal').textContent = 'OK';
   $('dgCal').className = 'v good';
-  showHint(`CAL OK ── DARK ${lo.toFixed(1)} / REF-A ${midA.toFixed(1)} / BRIGHT ${hi.toFixed(1)}`);
+  showHint(`CAL OK ── DARK ${lo.toFixed(1)} / REF40 ${midA.toFixed(1)} / BRIGHT ${hi.toFixed(1)}`);
   setStatus('signal', `CAL OK ── READY TO RECEIVE (RANGE ${(hi - lo).toFixed(1)})`);
 }
 
@@ -1463,12 +1463,12 @@ td,th{border:1px solid #c9c7bf; padding:4px 12px; text-align:left;}
 <p>パネル右上の主電源を入れると各系統が稼働します。切ると送信・受信・発音のすべてが停止します。</p>
 <h2>二、原理(LIDI演奏層)</h2>
 <p>鍵盤を押すと発光窓が音高に対応した輝度で光り、受信機のカメラが輝度から音高を判別して即座に鳴らします。
-<b>光っている間、鳴る。</b>消灯すれば消音。音域は2オクターブ(C4〜C6・25音)+消灯の26状態です。
+<b>光っている間、鳴る。</b>消灯すれば消音。音域は1オクターブ(C4〜C5・13音)+消灯の14状態です(スケールモードでさらに8段/6段に妥協可)。
 送信は単音のみですが、複数の受信機に異なる移調を設定すれば1音から和声が生まれます。</p>
 <h2>三、演奏手順</h2>
 <ol>
 <li><b>送信側:</b>主電源を入れ「発光窓」を開き、受信カメラへ正対。画面輝度は最大・自動輝度OFF</li>
-<li><b>送信側:</b>「較正光」を送る(最暗2秒→基準A 2秒→最明2秒)</li>
+<li><b>送信側:</b>「較正光」を送る(最暗2秒→基準光(40%) 2秒→最明2秒)</li>
 <li><b>受信側:</b>主電源を入れ「受信」でカメラ起動、白枠(ROI)を発光面に合わせ、較正光の発光中に「較正取込」</li>
 <li><b>送信側:</b>「演奏送信(TRANSMIT)」を入にして鍵盤を弾く(PCキー:下段ZXC…/上段Q2W…)</li>
 <li><b>受信側:</b>音が鳴り、音名と鍵盤ハイライトが表示されます</li>
@@ -1489,8 +1489,8 @@ td,th{border:1px solid #c9c7bf; padding:4px 12px; text-align:left;}
 端末A=原音、B=+4、C=+7 とすれば送信1音から長三和音(平行和声・オルガヌム的)。
 端末ごとの数十msの発音ばらつきは、アンサンブルの自然な揺らぎとして許容する設計です。</p>
 <h2>六、較正について</h2>
-<p>演奏前の多点キャリブレーション(最暗・基準A・最明)で、カメラのガンマ込みの輝度マッピングを構築します。
-基準Aの光はちょうどA4(440Hz)のレベルです。露出の完全マニュアルに非対応の機種(iOS Safari等)では、
+<p>演奏前の多点キャリブレーション(最暗・基準光(40%)・最明)で、カメラのガンマ込みの輝度マッピングを構築します。
+基準光(40%)の光はちょうどA4(440Hz)のレベルです。露出の完全マニュアルに非対応の機種(iOS Safari等)では、
 較正光でAEが安定した時点の値を基準とするAEロック的運用で代替します。
 照明条件が変わったら較正をやり直してください。</p>
 <h2>七、安全上の注意</h2>
@@ -1509,44 +1509,19 @@ td,th{border:1px solid #c9c7bf; padding:4px 12px; text-align:left;}
  * (輝度が連続すると受信側で音が繋がるため ── LIDI演奏層の要件)
  * ================================================================ */
 /* ================================================================
- * TRISTESSE(ショパン 別れの曲 Op.10-3)
- * ショパン研究所NIFCのHumdrumデジタル楽譜(初版Kistner版 010_1-6-1b-KI-003.krn)
- * の旋律声部から書き起こし。アウフタクトから主部終止(第21小節)まで。
- * 原調ホ長調を半音上のヘ長調へ移調(最低音B3を音域下限C4に載せるため)。
- * 16分音符=1unit。タイは合算済み。
+ * 自動演奏 ── 1オクターブ(C4〜C5)に収まるパブリックドメインの旋律
+ * いずれも実音域C4〜A4:CHROMA 13/DIATONIC 8 の両モードで演奏可能
  * ================================================================ */
-const _TRIS = [
-  [0,2],                                                    // (auftakt) B3→C4
-  [5,2],[4,1],[5,1],[7,5],                                  // m1: e d# e f#~
-  [9,1],[9,1],[7,1],[9,5],                                  // m2: g# g# f# g#~
-  [10,1],[10,1],[9,1],[14,3],[12,1],                        // m3: a a g# c#'. b
-  [10,1],[9,1],[4,1],[5,1],[7,5],                           // m4: a g# d# e f#~
-  [9,1],[9,1],[7,1],[5,4],                                  // m5: g# g# f# e
-  [9,1],[10,1],[7,1],[9,1],[10,1],[12,1],[9,1],[10,1],      // m6: 16分の綾
-  [14,2],[7,4],[9,1],[7,3],[9,1],[7,1],[12,4],              // m7-8: c#' f# g# f#~ g# f# b(ten.)
-  [5,2],[4,1],[5,1],[7,5],                                  // m9: 再現
-  [9,1],[9,1],[7,1],[9,5],                                  // m10
-  [10,1],[10,1],[9,1],[14,3],[12,1],                        // m11
-  [10,1],[9,1],[4,1],[5,1],[7,5],                           // m12
-  [9,1],[9,1],[7,1],[5,4],                                  // m13
-  [12,1],[14,1],[14,1],[12,1],[10,1],[12,1],[9,1],[10,1],   // m14: b c#' c#' b a b g# a
-  [16,1],[17,1],[17,1],[16,1],[14,1],[16,1],[13,1],[14,1],  // m15: stretto
-  [17,1],[19,1],[16,1],[17,1],[19,1],[21,1],[17,1],[19,1],  // m16: con forza
-  [21,4],[21,1],[19,1],[17,1],[14,1],                       // m17: g#''(ten.) 下行
-  [16,4],[17,1],[16,1],[14,1],[9,1],                        // m18: d#''(ten.)
-  [12,4],[14,1],[12,1],[10,1],[5,1],                        // m19: b'(ten.)
-  [9,8],                                                    // m20: g#'(rallent. 2分)
-  [5,4],[-1,6]];                                            // m21: e' 終止
-/* BWV147 コラール旋律(リトルネッロ8小節・3連の等拍) */
-const _JESU = [
-  [7,1],[9,1],[11,1],[14,1],[12,1],[12,1],[16,1],[14,1],[14,1],[19,1],[18,1],[19,1],[14,1],[11,1],[7,1],[9,1],[11,1],
-  [12,1],[14,1],[16,1],[14,1],[12,1],[11,1],[9,1],[11,1],[7,1],[6,1],[7,1],[9,1],[2,1],[6,1],[9,1],[12,1],
-  [11,1],[9,1],[11,1],[7,1],[9,1],[11,1],[12,1],[14,1],[16,1],[14,1],[12,1],[11,1],[9,1],[7,1]];
 const TUNES = [
-  { name:'TRISTESSE', unit:160, notes:[..._TRIS] },
-  { name:'JESU JOY', unit:200, notes:[..._JESU, [6,1],[7,2],
-    ..._JESU, [6,1],[7,2],
-    ..._JESU, [6,1],[7,9]] },
+  { name:'ODE TO JOY', unit:230, notes:[
+    [4,2],[4,2],[5,2],[7,2],[7,2],[5,2],[4,2],[2,2],[0,2],[0,2],[2,2],[4,2],[4,3],[2,1],[2,4],
+    [4,2],[4,2],[5,2],[7,2],[7,2],[5,2],[4,2],[2,2],[0,2],[0,2],[2,2],[4,2],[2,3],[0,1],[0,4],
+    [2,2],[2,2],[4,2],[0,2],[2,2],[4,1],[5,1],[4,2],[0,2],[2,2],[4,1],[5,1],[4,2],[2,2],[0,2],[2,2],[-1,2],
+    [4,2],[4,2],[5,2],[7,2],[7,2],[5,2],[4,2],[2,2],[0,2],[0,2],[2,2],[4,2],[2,3],[0,1],[0,6]]},
+  { name:'TWINKLE', unit:260, notes:[
+    [0,2],[0,2],[7,2],[7,2],[9,2],[9,2],[7,4],[5,2],[5,2],[4,2],[4,2],[2,2],[2,2],[0,4],
+    [7,2],[7,2],[5,2],[5,2],[4,2],[4,2],[2,4],[7,2],[7,2],[5,2],[5,2],[4,2],[4,2],[2,4],
+    [0,2],[0,2],[7,2],[7,2],[9,2],[9,2],[7,4],[5,2],[5,2],[4,2],[4,2],[2,2],[2,2],[0,6]]},
 ];
 const player = { running:false, timers:[] };
 function stopPlayer(){
@@ -1582,7 +1557,12 @@ function startPlayer(){
 $('playKey').onclick = () => {
   if (needPower()) return;
   if (player.running){ stopPlayer(); return; }
-  if (txScale !== 0){ showHint('AUTO PLAY REQUIRES SCALE: CHROMA 25'); return; }
+  { const sc = SCALES[txScale].semis;
+    const tune = TUNES[+$('tuneSel').value];
+    if (!tune.notes.every(n => n[0] < 0 || sc.includes(n[0]))){
+      showHint('TUNE NOT PLAYABLE IN ' + SCALES[txScale].name + ' ── USE CHROMA/DIATONIC');
+      return;
+    } }
   txVoice.ensure();
   if (!txArmed) showHint('TRANSMIT IS OFF ── MONITOR TONE ONLY');
   startPlayer();
