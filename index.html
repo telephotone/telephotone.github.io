@@ -453,6 +453,11 @@
         <div><label>Zoom</label><input type="range" id="zoom" min="1" max="8" step="0.1" value="1" disabled></div>
       </div>
 
+      <label>Signal Monitor ── waveform / threshold</label>
+      <div class="screen" style="height:92px">
+        <canvas id="wave" width="680" height="92" style="position:absolute; inset:0; width:100%; height:100%;"></canvas>
+      </div>
+
       <label>Pitch Monitor</label>
       <div class="screen noteScreen">
         <div id="rxNote" class="off">──</div>
@@ -653,7 +658,8 @@ class Demodulator{
   }
   _abort(){
     this.edges = []; this.bitBuf = []; this.frameBits = null;
-    this.pendingBoundary = false; this.T = 0; this.frameLen = 0; this.state = 'idle';
+    this.pendingBoundary = false; this.T = 0; this.frameLen = 0;
+    this.livePayload = []; this.state = 'idle';
   }
   _onEdge(t, dir){
     if (this.state === 'idle'){
@@ -707,6 +713,15 @@ class Demodulator{
         const lb = this._dec(this.frameBits.slice(0, 16)); const len = lb[0];
         if (len < 1 || len > 255){ this._abort(); return; }
         this.frameLen = len; this.frameNeed = (1 + len + 2) * 16;
+        this.livePayload = [];
+      } else if (this.frameNeed > 16 && this.frameBits.length % 16 === 0){
+        // 速報層:データバイト確定ごとに途中経過を通知(待ち時間の可視化)
+        const byteIdx = this.frameBits.length / 16 - 1;   // 0=LEN
+        if (byteIdx >= 1 && byteIdx <= this.frameLen){
+          const dec = this._dec(this.frameBits.slice(byteIdx * 16, byteIdx * 16 + 16));
+          this.livePayload.push(dec[0]);
+          this.onEvent({ type:'live', payload:[...this.livePayload], total:this.frameLen });
+        }
       }
       if (this.frameNeed > 16 && this.frameBits.length >= this.frameNeed) this._fin();
     }
@@ -1291,8 +1306,45 @@ $('rxPlayKey').onclick = () => {
   playRxScore();
 };
 
+let liveShown = false;
+function renderLiveRx(payload, total){
+  liveShown = true;
+  // 進捗バー(10コマ)+復号済みの直近音符
+  const done = payload.length, frac = Math.min(1, done / total);
+  const bar = '█'.repeat(Math.round(frac * 10)) + '░'.repeat(10 - Math.round(frac * 10));
+  let tail = '';
+  if (done >= 2){
+    const evs = payload.slice(1).map(b => ({ p: b & 31, d: (b >> 5) & 7 }))
+      .filter(e => e.p <= 25);
+    const last = evs.slice(-3).map(evText).join(' · ');
+    tail = last;
+    const lastNote = evs.length ? evs[evs.length - 1] : null;
+    if (lastNote && lastNote.p > 0){
+      $('rxNote').textContent = semiName(lastNote.p - 1);
+      $('rxNote').classList.remove('off');
+    }
+  } else {
+    $('rxNote').textContent = 'RX';
+    $('rxNote').classList.remove('off');
+  }
+  $('rxSub').innerHTML = `RX ${bar} ${done}/${total}B<br>${tail || 'HEADER…'}`;
+}
+function resetRxIdle(){
+  if (!liveShown) return;
+  liveShown = false;
+  if (rxPlayer.playing) return;
+  if (rxScore){
+    $('rxNote').textContent = '──'; $('rxNote').classList.add('off');
+    $('rxSub').innerHTML = `SCORE ${rxScore.events.length} NOTES<br>♩=${rxScore.tempo} · PLAY TO REPLAY`;
+  } else {
+    $('rxNote').textContent = '──'; $('rxNote').classList.add('off');
+    $('rxSub').innerHTML = 'STANDBY<br>&nbsp;';
+  }
+}
 const demod = new Demodulator(ev => {
+  if (ev.type === 'live'){ renderLiveRx(ev.payload, ev.total); return; }
   if (ev.type !== 'message') return;
+  liveShown = false;
   if (!ev.crcOk || ev.payload.length < 2){
     setStatus('RX ERROR ── CRC MISMATCH · ASK SENDER TO RESEND');
     return;
@@ -1461,7 +1513,11 @@ function startSampling(){
     while (_fpsTimes.length && t - _fpsTimes[0] > 1000) _fpsTimes.shift();
     const luma = sampleLuma(video);
     if (luma !== null){
+      waveBuf.push({ t, l: luma });
+      while (waveBuf.length && t - waveBuf[0].t > 4000) waveBuf.shift();
       demod.feed(t, luma);
+      if (demod.state !== 'frame') resetRxIdle();   // 受信中断→表示を戻す
+      drawWave();
       drawRoiOverlay(luma);
       $('dgFps').textContent = _fpsTimes.length;
       $('dgFps').className = 'v ' + (_fpsTimes.length >= 25 ? 'good' : 'warn');
@@ -1483,6 +1539,39 @@ function startSampling(){
   else rafId = requestAnimationFrame(onFrame);
 }
 function stopSampling(){ if (rafId) cancelAnimationFrame(rafId); rafId = null; }
+
+/* ---- 波形モニタ(直近4秒の輝度+判定しきい値 ── MABATAKI様式) ---- */
+const waveBuf = [];
+function drawWave(){
+  const cv = $('wave'); if (!cv) return;
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  ctx.clearRect(0, 0, W, H);
+  if (waveBuf.length < 2) return;
+  const t1 = waveBuf[waveBuf.length - 1].t, t0 = t1 - 4000;
+  const X = t => (t - t0) / 4000 * W;
+  const Y = l => H - 4 - (l / 255) * (H - 8);
+  if (demod.range >= demod.MIN_CONTRAST){
+    const hiL = demod.thrMid + demod.range * demod.HYST;
+    const loL = demod.thrMid - demod.range * demod.HYST;
+    ctx.strokeStyle = 'rgba(127,143,232,.55)'; ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, Y(hiL)); ctx.lineTo(W, Y(hiL)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, Y(loL)); ctx.lineTo(W, Y(loL)); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.strokeStyle = 'rgba(127,143,232,.3)';
+    ctx.beginPath(); ctx.moveTo(0, Y(demod.thrMid)); ctx.lineTo(W, Y(demod.thrMid)); ctx.stroke();
+  }
+  ctx.strokeStyle = '#2bff54'; ctx.lineWidth = 1.6;
+  ctx.shadowColor = 'rgba(43,255,84,.5)'; ctx.shadowBlur = 4;
+  ctx.beginPath();
+  let first = true;
+  for (const sm of waveBuf){
+    const x = X(sm.t), y = Y(sm.l);
+    if (first){ ctx.moveTo(x, y); first = false; } else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+}
 
 /* ================================================================
  * 方向幕セレクタ
