@@ -7,47 +7,32 @@
 <style>
   /* ================================================================
    * TELEPHOTONE TPV-04 ── デザインシステム
-   * コンセプト:アナログシンセサイザーのフロントパネル × モダニズム
-   * 最下段=鍵盤/その上に計器・モニタ群。フラット・ヘアライン・単色アクセント
+   * アナログシンセ配置 × モダニズム/物理部と電気部の峻別
+   * 方式:LIDIスコア伝送 ── 光の点滅(OOK+マンチェスター)で楽譜を送る
    * ================================================================ */
   :root{
-    --bg:#b8b6b0;              /* 机上 */
-    --panel:#ecebe6;           /* パネル面(温白) */
-    --panel-lo:#e2e1db;
-    --ink:#1d1c1a;             /* 刻印 */
-    --ink-dim:#77756e;
-    --line:#c9c7bf;            /* ヘアライン */
-    --line-dk:#8f8d85;
-    --accent:#2bff54;          /* 蛍光グリーン */
-    --accent-dk:#0f9c32;       /* 蛍光グリーンの縁 */
-    --green:#2bff54;
-    --scr-off:#0d0e12;         /* スクリーン消灯(黒ガラス) */
-    --scr-on:#0000a8;          /* スクリーン点灯(BIOSブルー) */
-    --scr-fg:#e6e9ff;          /* スクリーン文字(白) */
-    --scr-dim:#7f8fe8;         /* スクリーン文字(淡) */
-    --scr-grn:#2bff54;         /* スクリーン強調=蛍光グリーン */
+    --bg:#b8b6b0; --panel:#ecebe6; --panel-lo:#e2e1db;
+    --ink:#1d1c1a; --ink-dim:#77756e;
+    --line:#c9c7bf; --line-dk:#8f8d85;
+    --accent:#2bff54; --accent-dk:#0f9c32; --green:#2bff54;
+    --scr-off:#0d0e12; --scr-on:#0000a8;
+    --scr-fg:#e6e9ff; --scr-dim:#7f8fe8; --scr-grn:#2bff54;
     --sans:"Helvetica Neue",Helvetica,Arial,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
     --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Courier New",monospace;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
-  /* 上下余白はbodyのpaddingで確保する(.synthのmarginだとbody外へ相殺され
-     html背景=既定の明色が帯状に露出するため ── Chrome/全ブラウザ共通の挙動) */
   html,body{margin:0; padding:0; background:var(--bg); color:var(--ink);
     font-family:var(--sans); font-size:13px;}
-  body{padding:26px 12px 40px; min-height:100vh;}
-  /* 筐体はテキスト選択不可・クリック無反応(操作系のみ反応する) */
-  body{user-select:none; -webkit-user-select:none; cursor:default;}
-  .fnKey .knob, .pwrSw, .rollBtn, .tgl input, .kbWhite, .kbBlack,
+  body{padding:26px 12px 40px; min-height:100vh;
+    user-select:none; -webkit-user-select:none; cursor:default;}
+  .fnKey .knob, .pwrSw, .rollBtn, .miniBtn, .tgl input, .kbWhite, .kbBlack,
   input[type=range], details summary, .manualLink, #roiCanvas{cursor:pointer;}
 
-  /* ---------- ダークパネル(筐体色の別仕様) ----------
-   * 物理部品の性質は不変:鍵盤は白鍵のまま、ノブ・スイッチは黒のまま。
-   * 変わるのは筐体面・刻印・ヘアラインの色のみ。 */
   body.dark{ --bg:#111113; --panel:#242428; --panel-lo:#2c2c31;
     --ink:#e8e6e0; --ink-dim:#93918a; --line:#38383d; --line-dk:#5c5c62; }
   body.dark .synth{border-color:#000;
     box-shadow:0 18px 40px rgba(0,0,0,.55), 0 2px 6px rgba(0,0,0,.4);}
-  body.dark .fnKey .knob, body.dark .pwrSw, body.dark .rollBtn{border-color:#6f6f75;}
+  body.dark .fnKey .knob, body.dark .pwrSw, body.dark .rollBtn, body.dark .miniBtn{border-color:#6f6f75;}
   body.dark .rollWin{border-color:#55555a;}
   body.dark .tgl input{background:#3a3a3f;}
   body.dark .lcd, body.dark .screen{border-color:#000;
@@ -59,18 +44,16 @@
     border:1px solid var(--line-dk); border-radius:10px; overflow:hidden;
     box-shadow:0 18px 40px rgba(0,0,0,.28), 0 2px 6px rgba(0,0,0,.18);}
 
-  /* ---------- ヘッダー(ブランド+主電源) ---------- */
+  /* ---------- ヘッダー ---------- */
   .topbar{display:flex; align-items:center; justify-content:space-between;
     padding:20px 26px 16px; border-bottom:1px solid var(--line);}
   .brand{display:flex; flex-direction:column; gap:3px;}
   .brand .wordmark{font-size:21px; font-weight:700; letter-spacing:.42em; line-height:1;}
   .brand .wordmarkJp{font-size:12px; font-weight:400; letter-spacing:.2em; color:var(--ink-dim);}
   .brand .sub{font-size:9px; letter-spacing:.22em; color:var(--ink-dim); line-height:1.8;}
-  /* 主電源(トグル+LED) */
   .power{display:flex; align-items:center; gap:14px;}
   .pwrLbl{font-size:10px; letter-spacing:.3em; color:var(--ink-dim); text-align:right; line-height:1.7;}
   .pwrLbl b{display:block; color:var(--ink); font-size:11px; letter-spacing:.35em;}
-  /* 主電源=蛍光グリーン。ランプは物理ドーム+微細アウトライン */
   .pwrLed{width:10px; height:10px; border-radius:50%;
     background:radial-gradient(circle at 35% 30%, #f4f3ee, #c2c0b8 55%, #94928a);
     border:1px solid rgba(20,20,18,.45);
@@ -89,16 +72,11 @@
     transition:left .15s, background .15s;}
   .pwrSw:checked::after{left:29px; background:var(--accent); border-color:var(--accent-dk);}
 
-  /* ---------- モジュール共通 ---------- */
-  .deck{display:grid; grid-template-columns:1fr 1fr; }
-  @media (max-width:720px){ .deck{grid-template-columns:1fr;} .mod+.mod{border-left:none !important; border-top:1px solid var(--line);} }
-  /* 狭幅(スマホ):主電源は右上に絶対配置し、タイトル側に専用余白を確保
-     (フレックス詰めでは字間の広いワードマークと重なるため配置方式を分ける) */
+  /* 狭幅(スマホ):主電源は右上に絶対配置し、タイトル側に専用余白を確保 */
   @media (max-width:560px){
     .topbar{display:block; position:relative; padding:14px 14px 12px;}
     .brand{display:block; padding-right:128px; min-width:0;}
     .brand .wordmark{display:block; font-size:15px; letter-spacing:.2em; white-space:nowrap;}
-    /* カナ表記は独立行に(中途半端な折返しを防ぐ) */
     .brand .wordmarkJp{display:block; font-size:10px; letter-spacing:.12em;
       margin-top:3px; white-space:nowrap;}
     .brand .sub{font-size:8px; letter-spacing:.1em;}
@@ -111,22 +89,21 @@
     .sysbar, .mod, .keybed{padding-left:14px; padding-right:14px;}
     .warnStrip, .footer{padding-left:14px; padding-right:14px;}
   }
+
+  /* ---------- モジュール共通 ---------- */
+  .deck{display:grid; grid-template-columns:1fr 1fr;}
+  @media (max-width:720px){ .deck{grid-template-columns:1fr;} .mod+.mod{border-left:none !important; border-top:1px solid var(--line);} }
   .mod{padding:18px 26px 22px; min-width:0;}
   .mod+.mod{border-left:1px solid var(--line);}
   .modHead{display:flex; align-items:baseline; gap:10px; margin-bottom:14px;}
   .modNo{font-family:var(--mono); font-size:10px; color:var(--ink); letter-spacing:.1em;}
   .modName{font-size:11px; font-weight:700; letter-spacing:.32em;}
-  .modJp{font-size:9.5px; color:var(--ink-dim); letter-spacing:.2em;}
   .rule{border:none; border-top:1px solid var(--line); margin:16px 0 14px;}
   label, .lbl{display:block; font-size:9px; letter-spacing:.24em; color:var(--ink-dim);
     text-transform:uppercase; margin:14px 0 6px;}
-  .lblJp{font-size:9px; letter-spacing:.18em; color:var(--ink-dim);}
 
-  /* ---------- ファンクションスイッチ ----------
-   * 丸型2段階ロータリー:左=OFF/右=ON。黒ノブ+白指示線、刻印はパネル印字。
-   * ON状態は既存の .lit クラス(点灯ロジック)と連動して回転する。 */
+  /* ---------- ファンクションスイッチ(丸型2段階ロータリー) ---------- */
   .fnRow{display:flex; gap:10px; flex-wrap:wrap;}
-  /* 当たり判定はノブのみ(ラベル・ランプ部は反応しない) */
   .fnKey{flex:1; min-width:86px; padding:0; text-align:center; pointer-events:none;
     font-family:var(--sans); border:none; background:transparent; box-shadow:none;}
   .fnKey .knob{pointer-events:auto;}
@@ -143,11 +120,10 @@
   .fnKey.lit .knob{transform:rotate(38deg);}
   .fnKey:active .knob{box-shadow:0 1px 1px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.12);}
   .fnKey .fnLbl{display:block; font-size:10.5px; font-weight:700; letter-spacing:.18em; color:var(--ink);}
-  /* TRANSMIT / RECEIVE の刻印は強調色の地に載せる */
   .fnKey.org .fnLbl{display:inline-block; background:var(--accent); color:#06300f;
     padding:2px 7px 1px; border-radius:2px;}
   .fnKey .fnSub{display:block; font-size:8.5px; color:var(--ink-dim); letter-spacing:.12em; margin-top:3px;}
-  /* ---------- 物理ランプ(ドーム形・微細アウトライン) ---------- */
+  /* 物理ランプ */
   .led{display:block; width:9px; height:9px; border-radius:50%; margin:0 auto 6px;
     background:radial-gradient(circle at 35% 30%, #f4f3ee, #c2c0b8 55%, #94928a);
     border:1px solid rgba(20,20,18,.45);
@@ -164,16 +140,7 @@
     box-shadow:0 0 10px rgba(255,122,26,.95), 0 0 3px rgba(255,122,26,.9),
       inset 0 1px 1px rgba(255,255,255,.8), inset 0 -1px 2px rgba(0,0,0,.25);}
 
-  /* ---------- LCD計器タイル ---------- */
-  .lcdRow{display:grid; grid-template-columns:repeat(3,1fr); gap:8px;}
-  .lcdRow.four{grid-template-columns:repeat(4,1fr);}
-  /* ================================================================
-   * ディスプレイ共通の質感
-   * ・筐体より一段凹んだ位置(周囲からの落ち込み影+下縁の筐体ハイライト)
-   * ・艶消し液晶の鈍い面ハイライト(通電に関係なく常在=物理ガラス)
-   * ・通電時:バックライトは中心がほんのり明るく四隅が暗い(ムラのある個体)
-   * ・各ディスプレイの点灯タイミングは個体差でバラバラ(.pwr をJSが付与)
-   * ================================================================ */
+  /* ---------- ディスプレイ共通の質感 ---------- */
   .lcd, .screen{
     background:var(--scr-off);
     border:1px solid #26262b;
@@ -198,12 +165,10 @@
   .lcd.pwr .v.warn{color:#ffd060;} .lcd.pwr .v.bad{color:#ff5f4d;} .lcd.pwr .v.good{color:var(--scr-grn);}
   .lcd .k{display:block; font-size:8px; letter-spacing:.2em; color:#5a5850; margin-top:4px; text-transform:uppercase;}
   .lcd.pwr .k{color:var(--scr-dim);}
+  .lcdRow{display:grid; grid-template-columns:repeat(3,1fr); gap:8px;}
+  .lcdRow.four{grid-template-columns:repeat(4,1fr);}
 
-  /* ---------- スクリーン(カメラ/音高) ---------- */
   .screen{position:relative; border-radius:6px; overflow:hidden;}
-
-  /* ---------- システムディスプレイ(起動画面・状態・機器情報) ----------
-   * 可変テキストはすべてここに表示する(筐体印字は不変)。高さ固定でずれない。 */
   .sysbar{padding:12px 26px 0;}
   .sysScreen{height:54px; padding:10px 14px; font-family:var(--mono); font-size:11px;
     line-height:1.55; letter-spacing:.06em; overflow:hidden;}
@@ -212,6 +177,15 @@
   .sysScreen.pwr #sysL1{color:var(--scr-fg);}
   .sysScreen.pwr #sysL2{color:var(--scr-dim);}
   .sysScreen.pwr div.grn{color:var(--scr-grn) !important;}
+  /* スコア表示(送信バッファ) */
+  .scoreScreen{height:58px; padding:9px 12px; font-family:var(--mono); font-size:11.5px;
+    line-height:1.55; letter-spacing:.04em; overflow:hidden;}
+  #scoreLine{color:transparent; transition:color .25s; white-space:nowrap; overflow:hidden;
+    text-overflow:ellipsis; direction:rtl; text-align:left;}
+  #scoreLine bdi{direction:ltr; unicode-bidi:isolate;}
+  .screen.pwr #scoreLine{color:var(--scr-fg);}
+  #scoreLine2{color:transparent; transition:color .25s; font-size:9.5px; margin-top:3px;}
+  .screen.pwr #scoreLine2{color:var(--scr-dim);}
   .camScreen{height:210px;}
   #camView{position:absolute; inset:0; background:#000;}
   #camView video{width:100%; height:100%; object-fit:cover; display:block;}
@@ -228,12 +202,11 @@
     letter-spacing:.08em; line-height:1.9; transition:color .25s;}
   .screen.pwr #rxSub{color:var(--scr-dim);}
 
-  /* ---------- 入力類(フラット) ---------- */
+  /* ---------- 入力類 ---------- */
   select{width:100%; padding:8px 10px; font-size:12px; font-family:var(--sans);
     color:var(--ink); background:#fff; border:1px solid var(--line-dk); border-radius:4px;}
-  /* スライダー:ツマミとトラックに蛍光グリーンの強調色 */
   input[type=range]{width:100%; appearance:none; -webkit-appearance:none; height:22px;
-    background:transparent; cursor:pointer;}
+    background:transparent;}
   input[type=range]::-webkit-slider-runnable-track{height:2px;
     background:linear-gradient(90deg, var(--accent-dk), var(--accent));}
   input[type=range]::-webkit-slider-thumb{appearance:none; -webkit-appearance:none;
@@ -247,23 +220,15 @@
     background:linear-gradient(90deg, var(--accent-dk), var(--accent));}
   input[type=range]::-moz-range-thumb{width:13px; height:13px; border-radius:50%;
     background:var(--accent); border:2px solid var(--accent-dk);}
-  .btn{display:block; width:100%; padding:11px; margin-top:12px; font-size:11px; font-weight:700;
-    letter-spacing:.28em; font-family:var(--sans); color:var(--ink);
-    background:#fff; border:1px solid var(--line-dk); border-radius:4px; cursor:pointer;
-    box-shadow:0 2px 0 var(--line-dk); transition:transform .05s, box-shadow .05s;}
-  .btn:active{transform:translateY(2px); box-shadow:0 0 0 var(--line-dk);}
-  .btn:disabled{opacity:.35; cursor:default;}
-  /* トグル(小) */
   .tgl{display:flex; align-items:center; gap:10px; margin-top:12px; font-size:11px; letter-spacing:.12em;}
   .tgl input{appearance:none; -webkit-appearance:none; width:36px; height:18px; margin:0; flex:none;
     border:1px solid var(--line-dk); border-radius:9px; background:var(--panel-lo);
-    position:relative; cursor:pointer;}
+    position:relative;}
   .tgl input::after{content:''; position:absolute; top:2px; left:2px; width:12px; height:12px;
     border-radius:50%; background:#fff; border:1px solid var(--line-dk); transition:left .12s;}
   .tgl input:checked{background:var(--ink); border-color:var(--ink);}
   .tgl input:checked::after{left:19px; background:var(--accent); border-color:var(--accent-dk);}
-  /* ---------- 方向幕セレクタ(鉄道・バスの行き先表示風) ----------
-   * 機械式ロール=物理部品。通電に関係なく常に視認・操作できる。 */
+  /* 方向幕セレクタ */
   .roller{display:flex; align-items:stretch; gap:6px;}
   .rollWin{flex:1; position:relative; overflow:hidden; height:36px; border-radius:3px;
     border:1px solid #3f3f43; background:#f6f4ec;
@@ -282,8 +247,13 @@
     box-shadow:0 2px 0 rgba(0,0,0,.55);
     transition:transform .05s, box-shadow .05s;}
   .rollBtn:active{transform:translateY(2px); box-shadow:0 0 0 rgba(0,0,0,.55);}
-  /* 自動演奏列(方向幕+PLAYスイッチ) */
-  .autoRow{display:flex; gap:12px; align-items:flex-start;}
+  /* 小型押しボタン(REST/UNDO/CLEAR等の瞬時操作) */
+  .miniRow{display:flex; gap:8px;}
+  .miniBtn{flex:1; padding:9px 6px; font-size:9.5px; font-weight:700; letter-spacing:.18em;
+    color:#fff; background:#161614; border:1px solid #45454a; border-radius:3px;
+    box-shadow:0 2px 0 rgba(0,0,0,.55); transition:transform .05s, box-shadow .05s;
+    font-family:var(--sans);}
+  .miniBtn:active{transform:translateY(2px); box-shadow:0 0 0 rgba(0,0,0,.55);}
   .setGrid{display:grid; grid-template-columns:1fr 1fr; gap:0 14px;}
   .meta{font-size:10px; color:var(--ink-dim); margin-top:8px; line-height:1.8; letter-spacing:.06em;}
   details{margin-top:14px; border-top:1px solid var(--line); padding-top:10px;}
@@ -291,15 +261,9 @@
   details ul, details ol{margin:8px 0 2px; padding-left:16px; font-size:10.5px;
     color:var(--ink-dim); line-height:2;}
   details b{color:var(--ink);}
-  .status{display:flex; align-items:center; gap:8px; margin-top:12px;
-    font-size:10px; letter-spacing:.1em; color:var(--ink-dim);}
-  .dot{width:7px; height:7px; border-radius:50%; background:#c9c7bf; flex:none; transition:background .2s;}
-  .dot.signal{background:var(--accent); box-shadow:0 0 6px rgba(43,255,84,.7);}
-  .dot.rx{background:var(--accent); box-shadow:0 0 6px rgba(43,255,84,.7); animation:blink 1s infinite;}
-  @keyframes blink{50%{opacity:.3;}}
   .small{font-size:9.5px; color:var(--ink-dim); letter-spacing:.05em; margin-top:6px; line-height:1.8;}
 
-  /* ---------- 警告ストリップ ---------- */
+  /* ---------- 警告 ---------- */
   .warnStrip{display:flex; align-items:center; gap:12px; padding:10px 26px;
     border-top:1px solid var(--line); border-bottom:1px solid var(--line);
     background:repeating-linear-gradient(-45deg, rgba(29,28,26,.05) 0 10px, transparent 10px 20px);
@@ -307,26 +271,24 @@
   .warnStrip .tri{color:var(--ink); font-size:15px; flex:none;}
   .warnStrip b{color:var(--ink);}
 
-  /* ---------- 鍵盤(最下段・全幅) ---------- */
+  /* ---------- 鍵盤 ---------- */
   .keybed{padding:16px 26px 22px;}
   .keybedHead{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px;}
   .kbWrap{position:relative; height:158px; user-select:none; touch-action:none;
     border-radius:0 0 6px 6px;}
   @media (max-width:720px){ .kbWrap{height:120px;} }
   .kbWhite{position:absolute; top:0; bottom:0; border:1px solid var(--line-dk);
-    border-radius:0 0 4px 4px; background:#fdfdfb; cursor:pointer; z-index:1;
-    transition:background .04s;}
+    border-radius:0 0 4px 4px; background:#fdfdfb; z-index:1; transition:background .04s;}
   .kbWhite.down{background:var(--accent); border-color:var(--accent-dk);}
   .kbWhite.lit{background:#c8ffd6; border-color:var(--accent-dk);}
   .kbBlack{position:absolute; top:0; height:60%; border:1px solid #000;
-    border-radius:0 0 3px 3px; background:#232220; cursor:pointer; z-index:2;
-    transition:background .04s;}
+    border-radius:0 0 3px 3px; background:#232220; z-index:2; transition:background .04s;}
   .kbBlack.down{background:var(--accent); border-color:var(--accent-dk);}
   .kbBlack.lit{background:var(--accent-dk);}
   .kbLabel{position:absolute; bottom:5px; left:0; right:0; text-align:center;
-    font-size:7.5px; font-family:var(--mono); color:var(--ink-dim); pointer-events:none;
-    letter-spacing:0;}
+    font-size:7.5px; font-family:var(--mono); color:var(--ink-dim); pointer-events:none;}
   .kbWhite.down .kbLabel{color:#063f14;}
+  .kbMini .kbLabel{display:none;}
 
   /* ---------- フッター ---------- */
   .footer{display:flex; align-items:center; justify-content:space-between;
@@ -335,14 +297,11 @@
   .manualLink{cursor:pointer; text-decoration:underline; text-underline-offset:3px;}
   .manualLink:hover{color:var(--ink);}
 
-  /* ---------- 主電源OFF状態 ----------
-   * 物理部(鍵盤・スライダ・ボタン・トグル・印字)は通電に関係なく不変。
-   * 変化するのは電気的な部位のみ:スクリーン(黒ガラス⇄BIOSブルー)とランプ類。 */
+  /* ---------- 主電源OFF状態(電気部のみ変化) ---------- */
   .synth:not(.on) .led{
     background:radial-gradient(circle at 35% 30%, #f4f3ee, #c2c0b8 55%, #94928a) !important;
     border-color:rgba(20,20,18,.45) !important;
     box-shadow:inset 0 1px 1px rgba(255,255,255,.7), inset 0 -1px 2px rgba(0,0,0,.35) !important;}
-  .synth:not(.on) .dot{background:#c9c7bf !important; box-shadow:none !important; animation:none !important;}
   .synth:not(.on) .kbWhite.lit{background:#fdfdfb; border-color:var(--line-dk);}
   .synth:not(.on) .kbBlack.lit{background:#232220;}
 
@@ -358,7 +317,7 @@
 
 <div class="synth" id="synth">
 
-  <!-- ================= ヘッダー:ブランド+主電源 ================= -->
+  <!-- ================= ヘッダー ================= -->
   <div class="topbar">
     <div class="brand">
       <span class="wordmark">TELEPHOTONE <span class="wordmarkJp">-テレフォトン</span></span>
@@ -379,7 +338,7 @@
   <!-- ================= モジュール段 ================= -->
   <div class="deck">
 
-    <!-- ---- 01 送信部 ---- -->
+    <!-- ---- 01 送信部(スコア作成+点滅伝送) ---- -->
     <section class="mod">
       <div class="modHead"><span class="modNo">01</span>
         <span class="modName">EMITTER</span></div>
@@ -389,53 +348,83 @@
           <span class="led" id="lampPop"></span>
           <span class="dial"><span class="dOff">OFF</span><span class="knob"></span><span class="dOn">ON</span></span>
           <span class="fnLbl">WINDOW</span><span class="fnSub">EMIT SURFACE</span></span></button>
-        <button class="fnKey" id="txCal" title="Send full-scale calibration light (all levels, staircase)"><span class="cap">
-          <span class="led" id="lampCal"></span>
+        <button class="fnKey" id="prevKey" title="Preview the score locally"><span class="cap">
+          <span class="led" id="lampPrev"></span>
           <span class="dial"><span class="dOff">OFF</span><span class="knob"></span><span class="dOn">ON</span></span>
-          <span class="fnLbl">CAL LIGHT</span><span class="fnSub">CALIBRATION</span></span></button>
-        <button class="fnKey org" id="txKey" title="Arm/disarm performance transmit"><span class="cap">
-          <span class="led" id="lampTx"></span>
+          <span class="fnLbl">PREVIEW</span><span class="fnSub">LOCAL PLAY</span></span></button>
+        <button class="fnKey org" id="sendKey" title="Transmit the score by blinking light"><span class="cap">
+          <span class="led" id="lampSend"></span>
           <span class="dial"><span class="dOff">OFF</span><span class="knob"></span><span class="dOn">ON</span></span>
-          <span class="fnLbl">TRANSMIT</span><span class="fnSub">PERFORM</span></span></button>
+          <span class="fnLbl">SEND</span><span class="fnSub">BLINK TX</span></span></button>
       </div>
 
-      <label>Scale ── pitch alphabet (match with RX)</label>
-      <select id="txScaleSel">
-        <option value="0" selected>CHROMA 13 ── FULL RANGE</option>
-        <option value="1">DIATONIC 8 ── WIDE GAP</option>
-        <option value="2">PENTA 6 ── WIDEST GAP</option>
-      </select>
-
-      <label>Output Monitor</label>
-      <div class="lcdRow">
-        <div class="lcd"><span class="v" id="nxTxNote">---</span><span class="k">Note</span></div>
-        <div class="lcd"><span class="v" id="nxTxLevel">--</span><span class="k">Level</span></div>
-        <div class="lcd"><span class="v" id="nxTxPct">---</span><span class="k">%Lum</span></div>
+      <label>Score Buffer ── tap keys to add notes</label>
+      <div class="screen scoreScreen">
+        <div id="scoreLine"></div>
+        <div id="scoreLine2"></div>
       </div>
 
-      <div class="tgl"><input type="checkbox" id="txMonitor" checked><span>MONITOR TONE</span></div>
+      <div class="lcdRow" style="margin-top:8px">
+        <div class="lcd"><span class="v" id="lcdNote">---</span><span class="k">Last</span></div>
+        <div class="lcd"><span class="v" id="lcdCount">0</span><span class="k">Notes</span></div>
+        <div class="lcd"><span class="v" id="lcdEst">--</span><span class="k">Est.s</span></div>
+      </div>
+
+      <div class="setGrid">
+        <div><span class="lbl">Note Value 音価</span>
+          <select id="durSel">
+            <option value="0">1/16</option>
+            <option value="1">1/8</option>
+            <option value="2">1/8.</option>
+            <option value="3" selected>1/4</option>
+            <option value="4">1/4.</option>
+            <option value="5">1/2</option>
+            <option value="6">1/2.</option>
+            <option value="7">1/1</option>
+          </select></div>
+        <div><span class="lbl">Tempo ♩=BPM</span>
+          <select id="tempoSel">
+            <option value="60">60</option><option value="72">72</option>
+            <option value="84">84</option><option value="96">96</option>
+            <option value="108">108</option><option value="120" selected>120</option>
+            <option value="132">132</option><option value="144">144</option>
+            <option value="160">160</option><option value="180">180</option>
+          </select></div>
+      </div>
+      <label>Edit</label>
+      <div class="miniRow">
+        <button class="miniBtn" id="restBtn">REST</button>
+        <button class="miniBtn" id="undoBtn">UNDO</button>
+        <button class="miniBtn" id="clearBtn">CLEAR</button>
+      </div>
+
+      <div class="setGrid">
+        <div><span class="lbl">Bit Rate ── blink speed</span>
+          <select id="bpsSel">
+            <option value="5">5 BPS ── FAR / SAFE</option>
+            <option value="10" selected>10 BPS ── STANDARD</option>
+            <option value="15">15 BPS ── NEAR</option>
+            <option value="20">20 BPS ── CLOSE·60FPS</option>
+          </select></div>
+        <div><div class="tgl" style="margin-top:24px"><input type="checkbox" id="txMonitor" checked><span>KEY TONE</span></div></div>
+      </div>
 
       <hr class="rule">
-      <label>Auto Play ── public domain classics</label>
-      <div class="autoRow">
+      <label>Preset Scores ── public domain</label>
+      <div class="autoRow" style="display:flex; gap:8px; align-items:flex-start">
         <div style="flex:1; min-width:0">
           <select id="tuneSel">
             <option value="0">ODE TO JOY ── BEETHOVEN</option>
-            <option value="1">TWINKLE ── TRAD./MOZART VAR.</option>
+            <option value="1">TWINKLE ── TRAD.</option>
           </select>
         </div>
-        <button class="fnKey" id="playKey" style="flex:none; width:104px; min-width:0"
-          title="Play the selected tune (emits light while TRANSMIT is ON)"><span class="cap">
-          <span class="led" id="lampPlay"></span>
-          <span class="dial"><span class="dOff">OFF</span><span class="knob"></span><span class="dOn">ON</span></span>
-          <span class="fnLbl">PLAY</span><span class="fnSub">SEQUENCER</span></span></button>
+        <button class="miniBtn" id="loadBtn" style="flex:none; width:72px; margin-top:0">LOAD</button>
       </div>
-      <div class="tgl"><input type="checkbox" id="playLoop"><span>LOOP</span></div>
 
-      <div class="meta">Open WINDOW, set TRANSMIT to ON, and play. Key down = light = sound. Key up = dark = mute. See the manual for setup details.</div>
+      <div class="meta">Tap keys to build a score (note value from the roller), then SEND ── the window blinks the score as light. Not realtime: the receiver decodes, then performs it.</div>
     </section>
 
-    <!-- ---- 02 受信部 ---- -->
+    <!-- ---- 02 受信部(点滅復調+自動演奏) ---- -->
     <section class="mod">
       <div class="modHead"><span class="modNo">02</span>
         <span class="modName">RECEIVER</span></div>
@@ -445,16 +434,16 @@
           <span class="led" id="lampRx"></span>
           <span class="dial"><span class="dOff">OFF</span><span class="knob"></span><span class="dOn">ON</span></span>
           <span class="fnLbl">RECEIVE</span><span class="fnSub">CAMERA</span></span></button>
-        <button class="fnKey" id="calBtn" title="Turn ON first, then start CAL LIGHT on the transmitter"><span class="cap">
-          <span class="led" id="lampCalRx"></span>
+        <button class="fnKey" id="rxPlayKey" title="Replay the last received score"><span class="cap">
+          <span class="led" id="lampRxPlay"></span>
           <span class="dial"><span class="dOff">OFF</span><span class="knob"></span><span class="dOn">ON</span></span>
-          <span class="fnLbl">CAPTURE</span><span class="fnSub">CALIBRATION</span></span></button>
+          <span class="fnLbl">PLAY</span><span class="fnSub">RECEIVED SCORE</span></span></button>
       </div>
 
       <label>Camera Monitor ── drag white frame (ROI)</label>
       <div class="screen camScreen">
         <div id="camIdle">RECEIVE READY</div>
-        <div id="camView" class="hidden" style="display:none">
+        <div id="camView" style="display:none">
           <video id="video" autoplay playsinline muted></video>
         </div>
         <canvas id="roiCanvas" style="display:none"></canvas>
@@ -473,10 +462,11 @@
       <label>Meters</label>
       <div class="lcdRow four">
         <div class="lcd"><span class="v" id="dgFps">–</span><span class="k">FPS</span></div>
-        <div class="lcd"><span class="v dim" id="dgCal">RAW</span><span class="k">Calib</span></div>
-        <div class="lcd"><span class="v" id="dgLevel">–</span><span class="k">Level</span></div>
-        <div class="lcd"><span class="v" id="dgConf">–</span><span class="k">Margin</span></div>
+        <div class="lcd"><span class="v" id="dgSig">–</span><span class="k">Signal</span></div>
+        <div class="lcd"><span class="v dim" id="dgState">–</span><span class="k">State</span></div>
+        <div class="lcd"><span class="v" id="dgBits">–</span><span class="k">Bits</span></div>
       </div>
+
       <hr class="rule">
       <label>Local Settings ── overridden by LIDI control layer</label>
       <div class="setGrid">
@@ -503,33 +493,18 @@
             <option value="7">+7 PERFECT 5TH</option>
             <option value="12">+12 OCTAVE UP</option>
           </select></div>
-        <div><span class="lbl">Detect Frames</span>
-          <select id="stableN">
-            <option value="1">1 FAST</option>
-            <option value="2" selected>2 NORMAL</option>
-            <option value="3">3 STABLE</option>
-          </select></div>
-        <div><span class="lbl">Scale (match with TX)</span>
-          <select id="rxScaleSel">
-            <option value="0" selected>CHROMA 13</option>
-            <option value="1">DIATONIC 8</option>
-            <option value="2">PENTA 6</option>
-          </select></div>
+        <div><span class="lbl">Volume</span><input type="range" id="rxVol" min="0" max="100" value="70" style="margin-top:10px"></div>
       </div>
-      <div class="setGrid" style="margin-top:4px">
-        <div><span class="lbl">Volume</span><input type="range" id="rxVol" min="0" max="100" value="70"></div>
-        <div><div class="tgl" style="margin-top:20px"><input type="checkbox" id="rxMute"><span>MUTE</span></div></div>
-      </div>
+      <div class="tgl"><input type="checkbox" id="rxMute"><span>MUTE</span></div>
 
       <details>
         <summary>ENSEMBLE ── how to build harmony</summary>
         <ul>
-          <li>Multiple receivers on one light: set Transpose A=±0 / B=+4 / C=+7 for a major triad from a single note</li>
-          <li>Tens-of-ms timing spread between devices is embraced as ensemble looseness</li>
-          <li>Keep only the emitting surface inside the ROI; fix the camera on a tripod</li>
-          <li>Calibration order: turn CAPTURE ON first (RX), then CAL LIGHT ON (TX). Re-capture whenever lighting changes</li>
+          <li>One blinking light, many receivers: every phone that decodes the score plays it. Set Transpose A=±0 / B=+4 / C=+7 for parallel harmony</li>
+          <li>Binary blink (bright/dark) is far more robust than luminance levels ── works in daylight-ish conditions and at distance</li>
+          <li>Keep only the emitting surface inside the ROI; fix the camera</li>
+          <li>Lower bit rate (5 BPS) for long distance; 20 BPS needs a 60fps camera up close</li>
           <li>Camera requires https (or localhost)</li>
-          <li><b>Tough conditions: set Scale to DIATONIC 8 or PENTA 6 on both TX and RX</b> ── level gaps widen 1.6×/2.2× within the 1-octave range</li>
           <li><b>iPhone: turn OFF the side silent switch</b> ── Web Audio is muted while the ringer is silenced</li>
         </ul>
       </details>
@@ -538,13 +513,13 @@
 
   <!-- ================= 警告 ================= -->
   <div class="warnStrip"><span class="tri">⚠</span>
-    <span><b>DO NOT STARE INTO THE EMITTING SURFACE.</b> Output is mostly steady luminance, but calibration light involves blinking. Take care if you are sensitive to flashing lights.</span></div>
+    <span><b>DO NOT STARE INTO THE EMITTING SURFACE.</b> Score transmission uses rapid blinking light. Take care if you are sensitive to flashing lights.</span></div>
 
   <!-- ================= 鍵盤(最下段) ================= -->
   <div class="keybed">
     <div class="keybedHead">
-      <span class="lbl" style="margin:0">Keybed ── C4–C5 · 13 keys · monophonic (last-note priority)</span>
-      <span class="lbl" style="margin:0">PC: Z S X D C V G B H N J M ,</span>
+      <span class="lbl" style="margin:0">Keybed ── C4–C6 · 25 keys · step input</span>
+      <span class="lbl" style="margin:0">PC: Z S X D C … / Q 2 W 3 E …</span>
     </div>
     <div class="kbWrap" id="kbMain"></div>
   </div>
@@ -559,7 +534,6 @@
   </div>
 </div>
 
-<!-- 受信ハイライト用ミニ鍵盤は受信部Pitch Monitor下に動的挿入 -->
 <div id="flash"><div id="flashInfo">PREPARING…</div></div>
 
 <script>
@@ -568,34 +542,202 @@
 const $ = id => document.getElementById(id);
 
 /* ================================================================
- * LIDI規格 演奏層 ── 共通定義
- * 26状態:state 0 = 消灯(キーオフ) / state 1..25 = C4..C6
- * 発光画素値 v = state/25(等分)。受信側は3点較正(最暗/基準光(40%)/最明)から
- * べき乗ガンマモデルで期待輝度を構築し最近傍判別する。
- * 基準光(40%) = A4(440Hz)= state 10 = v 0.40 ── 較正光の中間点そのもの。
+ * LIDI規格 スコア伝送層(確定仕様)
+ * ── 演奏信号はリアルタイム輝度ではなく「楽譜の点滅伝送」で送る。
+ * ペイロード: [BPM(1B)] [音符イベント(1B)×n]
+ *   音符イベント = [音価3bit][音高5bit]
+ *   音高: 0=休符 / 1..25 = C4..C6(2オクターブ)
+ *   音価: 0=1/16 1=1/8 2=1/8. 3=1/4 4=1/4. 5=1/2 6=1/2. 7=1/1
+ * フレーム: プリアンブル24bit+同期語0x2DD4+
+ *   Hamming(8,4)FEC[(LEN+payload+CRC16)] をマンチェスター符号で点滅
+ * (MABATAKI SIGNAL(TPV-03)の伝送コアをLIDIスコア用に転用)
  * ================================================================ */
 const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
-/* 音高アルファベット(スケールモード)── 音域は1オクターブ(C4〜C5)。
- * 実地検証の結果、2オクターブ(25段)は環境依存が大きく1オクターブに確定。
- *   CHROMA 13   : 13段(ギャップ=レンジの7.7%)
- *   DIATONIC 8  : 8段(12.5% ── 約1.6倍)
- *   PENTA 6     : 6段(16.7% ── 約2.2倍)
- * 送信側と受信側で同じモードに合わせること。 */
-const SCALES = [
-  { name:'CHROMA 13',  semis: Array.from({length:13}, (_, i) => i) },
-  { name:'DIATONIC 8', semis: [0,2,4,5,7,9,11,12] },
-  { name:'PENTA 6',    semis: [0,2,4,7,9,12] },
-];
-let txScale = 0, rxScale = 0;
 function semiName(semi){ return NOTE_NAMES[semi % 12] + (4 + Math.floor(semi / 12)); }
 function semiFreq(semi, trans){
   const midi = 60 + semi + (trans || 0);
   return 440 * Math.pow(2, (midi - 69) / 12);
 }
+const DURS = [
+  { name:'1/16', beats:0.25 },
+  { name:'1/8',  beats:0.5 },
+  { name:'1/8.', beats:0.75 },
+  { name:'1/4',  beats:1 },
+  { name:'1/4.', beats:1.5 },
+  { name:'1/2',  beats:2 },
+  { name:'1/2.', beats:3 },
+  { name:'1/1',  beats:4 },
+];
+const SYNC = 0x2DD4, PREAMBLE_BITS = 24;
+
+/* ---------- CRC-16/CCITT + Hamming(8,4) ---------- */
+function crc16(bytes){
+  let c = 0xFFFF;
+  for (const b of bytes){
+    c ^= b << 8;
+    for (let i = 0; i < 8; i++) c = (c & 0x8000) ? ((c << 1) ^ 0x1021) & 0xFFFF : (c << 1) & 0xFFFF;
+  }
+  return c;
+}
+const HAM_ENC = new Uint8Array(16), HAM_DEC = new Int8Array(256).fill(-1);
+(function(){
+  for (let n = 0; n < 16; n++){
+    const d1 = n>>3&1, d2 = n>>2&1, d3 = n>>1&1, d4 = n&1;
+    const p1 = d1^d2^d4, p2 = d1^d3^d4, p3 = d2^d3^d4;
+    let cw = (p1<<6)|(p2<<5)|(d1<<4)|(p3<<3)|(d2<<2)|(d3<<1)|d4;
+    let par = 0; for (let i = 0; i < 7; i++) par ^= (cw>>i)&1;
+    HAM_ENC[n] = (cw<<1)|par;
+  }
+  const pc = x => { let c = 0; while (x){ c += x&1; x >>= 1; } return c; };
+  for (let v = 0; v < 256; v++)
+    for (let n = 0; n < 16; n++){ if (pc(v ^ HAM_ENC[n]) <= 1){ HAM_DEC[v] = n; break; } }
+})();
+function fecEncode(b){
+  const o = new Uint8Array(b.length * 2);
+  for (let i = 0; i < b.length; i++){ o[2*i] = HAM_ENC[b[i]>>4&15]; o[2*i+1] = HAM_ENC[b[i]&15]; }
+  return o;
+}
+function buildFrameBits(payload){
+  const raw = new Uint8Array(1 + payload.length + 2);
+  raw[0] = payload.length; raw.set(payload, 1);
+  const c = crc16(raw.subarray(0, 1 + payload.length));
+  raw[1 + payload.length] = c >> 8; raw[2 + payload.length] = c & 255;
+  const coded = fecEncode(raw);
+  const bits = [];
+  for (let i = 0; i < PREAMBLE_BITS; i++) bits.push(i % 2 === 0 ? 1 : 0);
+  for (let i = 15; i >= 0; i--) bits.push((SYNC >> i) & 1);
+  for (const b of coded) for (let i = 7; i >= 0; i--) bits.push((b >> i) & 1);
+  return bits;
+}
+function bitsToHalfbits(bits){
+  const hb = [];
+  for (const b of bits){ if (b) hb.push(0, 1); else hb.push(1, 0); }
+  return hb;
+}
+
+/* ---------- 復調器(MABATAKIコア移植/ビットレート自動推定) ---------- */
+class Demodulator{
+  constructor(onEvent){
+    this.onEvent = onEvent || (() => {});
+    this.WINDOW_MS = 1700; this.MIN_CONTRAST = 8; this.HYST = 0.11;
+    this.T_MIN = 22; this.T_MAX = 900; this.LOCK_NEED = 5;
+    this.reset();
+  }
+  reset(){
+    this.win = []; this.bin = -1; this.lastCross = null; this.edges = [];
+    this.state = 'no_signal'; this.T = 0; this.lastMid = 0;
+    this.pendingBoundary = false; this.bitBuf = [];
+    this.frameBits = null; this.frameNeed = 0; this.frameLen = 0;
+  }
+  feed(t, l){
+    this.win.push({t, l});
+    while (this.win.length && t - this.win[0].t > this.WINDOW_MS) this.win.shift();
+    let mn = Infinity, mx = -Infinity;
+    for (const s of this.win){ if (s.l < mn) mn = s.l; if (s.l > mx) mx = s.l; }
+    const range = mx - mn; this.range = range; this.thrMid = (mn + mx) / 2;
+    if (range < this.MIN_CONTRAST){ if (this.state !== 'no_signal') this.reset(); return; }
+    if (this.state === 'no_signal') this.state = 'idle';
+    const hi = this.thrMid + range * this.HYST, lo = this.thrMid - range * this.HYST;
+    let nb = this.bin;
+    if (this.bin !== 1 && l > hi) nb = 1;
+    else if (this.bin !== 0 && l < lo) nb = 0;
+    if (this.bin === -1){ this.bin = nb === -1 ? (l > this.thrMid ? 1 : 0) : nb; this.lastCross = {t, l}; return; }
+    if (nb !== this.bin){
+      const p = this.lastCross; let te = t;
+      if (p && p.l !== l){ const f = (this.thrMid - p.l) / (l - p.l); te = p.t + Math.max(0, Math.min(1, f)) * (t - p.t); }
+      this.bin = nb; this._onEdge(te, nb === 1 ? 1 : -1);
+    } else if (this.state === 'frame' || this.state === 'locked'){
+      if (t - this.lastMid > this.T * 3) this._abort();
+    }
+    this.lastCross = {t, l};
+  }
+  _abort(){
+    this.edges = []; this.bitBuf = []; this.frameBits = null;
+    this.pendingBoundary = false; this.T = 0; this.frameLen = 0; this.state = 'idle';
+  }
+  _onEdge(t, dir){
+    if (this.state === 'idle'){
+      this.edges.push({t, dir});
+      if (this.edges.length > 40) this.edges.shift();
+      this._tryLock(); return;
+    }
+    if (this.state !== 'locked' && this.state !== 'frame') return;
+    const dt = t - this.lastMid, T = this.T;
+    if (this.pendingBoundary){
+      if (dt >= 0.72 * T && dt <= 1.55 * T){ this.pendingBoundary = false; this._mid(t, dir, dt); }
+      else if (dt < 0.72 * T){ /* glitch */ }
+      else { this._abort(); }
+      return;
+    }
+    if (dt < 0.2 * T){ /* glitch */ }
+    else if (dt < 0.72 * T){ this.pendingBoundary = true; }
+    else if (dt <= 1.55 * T){ this._mid(t, dir, dt); }
+    else { this._abort(); this._onEdge(t, dir); }
+  }
+  _mid(t, dir, dt){ this.T = 0.85 * this.T + 0.15 * dt; this.lastMid = t; this._push(dir > 0 ? 1 : 0); }
+  _tryLock(){
+    const e = this.edges, K = this.LOCK_NEED;
+    if (e.length < K + 1) return;
+    const tail = e.slice(-(K + 1)); const ivs = [];
+    for (let i = 1; i < tail.length; i++){
+      ivs.push(tail[i].t - tail[i - 1].t);
+      if (tail[i].dir === tail[i - 1].dir) return;
+    }
+    const srt = [...ivs].sort((a, b) => a - b); const med = srt[srt.length >> 1];
+    if (med < this.T_MIN || med > this.T_MAX) return;
+    for (const iv of ivs) if (Math.abs(iv - med) > 0.40 * med) return;
+    this.T = med; this.lastMid = tail[tail.length - 1].t;
+    this.pendingBoundary = false;
+    this.bitBuf = [tail[tail.length - 1].dir > 0 ? 1 : 0];
+    this.edges = []; this.state = 'locked';
+  }
+  _push(b){
+    if (this.state === 'locked'){
+      this.bitBuf.push(b);
+      if (this.bitBuf.length > 64) this.bitBuf.shift();
+      if (this.bitBuf.length >= 16){
+        let v = 0; const s = this.bitBuf.slice(-16);
+        for (const bit of s) v = ((v << 1) | bit) & 0xFFFF;
+        let d = v ^ SYNC, c = 0; while (d){ c += d & 1; d >>= 1; }
+        if (c <= 1){ this.frameBits = []; this.frameNeed = 16; this.frameLen = 0; this.state = 'frame'; }
+      }
+    } else if (this.state === 'frame'){
+      this.frameBits.push(b);
+      if (this.frameBits.length === 16 && this.frameNeed === 16){
+        const lb = this._dec(this.frameBits.slice(0, 16)); const len = lb[0];
+        if (len < 1 || len > 255){ this._abort(); return; }
+        this.frameLen = len; this.frameNeed = (1 + len + 2) * 16;
+      }
+      if (this.frameNeed > 16 && this.frameBits.length >= this.frameNeed) this._fin();
+    }
+  }
+  _dec(bits){
+    const coded = new Uint8Array(bits.length >> 3);
+    for (let i = 0; i < coded.length; i++){
+      let v = 0; for (let j = 0; j < 8; j++) v = (v << 1) | bits[i * 8 + j];
+      coded[i] = v;
+    }
+    const n = coded.length >> 1; const bytes = new Uint8Array(n); this._fatal = 0;
+    for (let i = 0; i < n; i++){
+      let hi = HAM_DEC[coded[2 * i]], lo = HAM_DEC[coded[2 * i + 1]];
+      if (hi < 0){ hi = 0; this._fatal++; }
+      if (lo < 0){ lo = 0; this._fatal++; }
+      bytes[i] = (hi << 4) | lo;
+    }
+    return bytes;
+  }
+  _fin(){
+    const raw = this._dec(this.frameBits); const len = raw[0];
+    const pay = raw.subarray(1, 1 + len);
+    const got = (raw[1 + len] << 8) | raw[2 + len];
+    const ok = crc16(raw.subarray(0, 1 + len)) === got && this._fatal === 0;
+    this.onEvent({ type:'message', payload:Array.from(pay), crcOk: ok });
+    this._abort();
+  }
+}
 
 /* ================================================================
  * システムディスプレイ ── 可変テキストの唯一の表示先(筐体印字は不変)
- * 行1=状態/行2=機器情報。ヒントは行2に一時表示して自動復帰。
  * ================================================================ */
 let sysStatus = '', sysInfo = '', booting = false;
 let bootTimers = [], hintTimer = null;
@@ -606,10 +748,9 @@ function renderSys(){
   $('sysL2').textContent = sysInfo;
   $('sysL2').classList.remove('grn');
 }
-function setStatus(cls, txt){ sysStatus = txt; renderSys(); }
+function setStatus(txt){ sysStatus = txt; renderSys(); }
 function setSysInfo(txt){ sysInfo = txt; renderSys(); }
 function showHint(msg){
-  // 電源断・起動中は表示不能(実機挙動)
   if (!powered || booting) return;
   $('sysL2').textContent = '▲ ' + msg;
   $('sysL2').classList.add('grn');
@@ -618,16 +759,10 @@ function showHint(msg){
 }
 
 /* ================================================================
- * 主電源(MABATAKI SIGNAL仕様準拠:OFFで全系統停止・投入で稼働)
- * 投入時はシステム起動シーケンス(BIOS風・LIDIエンジンロード)を演出
+ * 主電源+起動シーケンス
  * ================================================================ */
 let powered = false;
-function clearBoot(){
-  bootTimers.forEach(clearTimeout);
-  bootTimers = [];
-  booting = false;
-}
-/* 各ディスプレイの点灯は個体差でバラバラ(150〜1250ms)。電源断は一斉消灯 */
+function clearBoot(){ bootTimers.forEach(clearTimeout); bootTimers = []; booting = false; }
 function powerOnFx(){
   document.querySelectorAll('.screen, .lcd').forEach(el => {
     const d = 150 + Math.random() * 1100;
@@ -663,7 +798,6 @@ function bootSequence(){
   });
   at(tEnd + 1300, () => {
     booting = false;
-    // 起動チャイム ── iOS等で音声系が生きているかの確認を兼ねる(鳴らなければ音声の問題)
     try {
       rxVoice.setTone(0);
       rxVoice.noteOn(880);
@@ -673,7 +807,7 @@ function bootSequence(){
     $('rxNote').textContent = '──';
     $('rxNote').classList.add('off');
     $('rxSub').innerHTML = 'STANDBY<br>&nbsp;';
-    sysStatus = 'SYSTEM READY ── PRESS RECEIVE TO BECOME A RECEIVER';
+    sysStatus = 'SYSTEM READY ── BUILD A SCORE OR PRESS RECEIVE';
     sysInfo = '';
     renderSys();
   });
@@ -682,19 +816,14 @@ $('pwrSw').addEventListener('change', () => {
   powered = $('pwrSw').checked;
   $('synth').classList.toggle('on', powered);
   if (powered){
-    // iOS Safari対策:ユーザー操作(電源投入)の同期文脈でAudioContextを解錠
     txVoice.ensure(); rxVoice.ensure();
     powerOnFx();
     bootSequence();
   } else {
-    // 全系統停止
     clearBoot();
     powerOffFx();
-    if (player.running) stopPlayer();
-    if (txArmed) disarmTx();
-    if (calRunning) stopCalTx();
-    heldStack = [];
-    txSetSemi(-1);
+    stopSend();
+    txPlayer.stop(); rxPlayer.stop();
     if (stream) stopCamera();
     txVoice.noteOff(); rxVoice.noteOff();
     $('camIdle').textContent = 'RECEIVE READY';
@@ -705,24 +834,20 @@ $('pwrSw').addEventListener('change', () => {
     renderSys();
   }
 });
-function needPower(){
-  if (!powered) return true;                       // 電源断:無反応(実機挙動)
-  if (booting){ return true; }                     // 起動中:まだ受け付けない
-  return false;
-}
+function needPower(){ return !powered || booting; }
 
 /* ================================================================
- * 音色バンク(LIDI音色番号 1..8 ── 受信側HTML内蔵・データは送らない)
+ * 音色バンク+単声エンジン
  * ================================================================ */
 const TONE_BANK = [
-  { name:'サイン笛',       wave:'sine',     a:0.012, d:0.05, s:0.85, r:0.10 },
-  { name:'パイプオルガン', partials:[1,0.55,0.35,0.28,0.16,0.10], a:0.03, d:0.05, s:1.00, r:0.12 },
-  { name:'矩形リード',     wave:'square',   a:0.010, d:0.04, s:0.65, r:0.07, lvl:0.55 },
-  { name:'鋸ブラス',       wave:'sawtooth', a:0.035, d:0.06, s:0.75, r:0.09, lvl:0.6 },
-  { name:'三角フルート',   wave:'triangle', a:0.05,  d:0.05, s:0.90, r:0.14 },
-  { name:'エレピ',         wave:'sine',     a:0.005, d:0.45, s:0.30, r:0.25 },
-  { name:'ベル',           partials:[1,0,0.45,0,0.25,0,0.12], a:0.004, d:0.9, s:0.12, r:0.5 },
-  { name:'うたごえ',       wave:'sine',     a:0.06,  d:0.08, s:0.90, r:0.16, vib:{rate:5.5, cents:14} },
+  { name:'SINE FLUTE', wave:'sine',     a:0.012, d:0.05, s:0.85, r:0.10 },
+  { name:'PIPE ORGAN', partials:[1,0.55,0.35,0.28,0.16,0.10], a:0.03, d:0.05, s:1.00, r:0.12 },
+  { name:'SQUARE REED', wave:'square',  a:0.010, d:0.04, s:0.65, r:0.07, lvl:0.55 },
+  { name:'SAW BRASS',  wave:'sawtooth', a:0.035, d:0.06, s:0.75, r:0.09, lvl:0.6 },
+  { name:'TRI FLUTE',  wave:'triangle', a:0.05,  d:0.05, s:0.90, r:0.14 },
+  { name:'E.PIANO',    wave:'sine',     a:0.005, d:0.45, s:0.30, r:0.25 },
+  { name:'BELL',       partials:[1,0,0.45,0,0.25,0,0.12], a:0.004, d:0.9, s:0.12, r:0.5 },
+  { name:'VOICE',      wave:'sine',     a:0.06,  d:0.08, s:0.90, r:0.16, vib:{rate:5.5, cents:14} },
 ];
 function makeVoice(){
   let ctx = null, osc = null, gain = null, vibOsc = null, vibGain = null;
@@ -738,8 +863,7 @@ function makeVoice(){
     osc.connect(gain); gain.connect(ctx.destination);
     osc.start();
     vibOsc = ctx.createOscillator(); vibGain = ctx.createGain();
-    vibGain.gain.value = 0;
-    vibOsc.frequency.value = 5.5;
+    vibGain.gain.value = 0; vibOsc.frequency.value = 5.5;
     vibOsc.connect(vibGain); vibGain.connect(osc.frequency);
     vibOsc.start();
     return true;
@@ -781,21 +905,69 @@ function makeVoice(){
     gain.gain.cancelScheduledValues(now);
     gain.gain.setTargetAtTime(0, now, Math.max(0.02, t.r / 3));
   }
-  return {
-    ensure, noteOn, noteOff,
-    setTone(i){ curTone = i; },
-    setVolume(v){ master = v; },
-  };
+  return { ensure, noteOn, noteOff, setTone(i){ curTone = i; }, setVolume(v){ master = v; } };
 }
 const txVoice = makeVoice();
 const rxVoice = makeVoice();
+['pointerdown', 'touchstart', 'touchend', 'keydown'].forEach(ev =>
+  document.addEventListener(ev, () => {
+    if (powered){ txVoice.ensure(); rxVoice.ensure(); }
+  }, { passive: true }));
 
 /* ================================================================
- * 鍵盤UI(送信25鍵+受信ハイライト用ミニ25鍵)
+ * スコア再生エンジン(送信プレビュー用/受信演奏用)
  * ================================================================ */
-const WHITE_SEMIS = [0,2,4,5,7,9,11,12];
-const BLACK_SEMIS = [1,3,6,8,10];
-const BLACK_AFTER = [0,1,3,4,5];
+function makePlayer(voice){
+  const P = { timers: [], playing: false, onNote: null, onEnd: null };
+  P.stop = () => {
+    if (!P.playing && P.timers.length === 0) return;
+    P.playing = false;
+    P.timers.forEach(clearTimeout); P.timers = [];
+    voice.noteOff();
+    P.onNote && P.onNote(-1);
+    P.onEnd && P.onEnd();
+  };
+  P.play = (sc, trans, muted) => {
+    P.stop();
+    P.playing = true;
+    let t = 200;
+    for (const ev of sc.events){
+      const ms = DURS[ev.d].beats * 60000 / sc.tempo;
+      if (ev.p > 0){
+        const semi = ev.p - 1;
+        P.timers.push(setTimeout(() => {
+          if (!P.playing) return;
+          if (!muted || !muted()) voice.noteOn(semiFreq(semi, trans ? trans() : 0));
+          P.onNote && P.onNote(semi);
+        }, t));
+        const gap = Math.min(55, ms * 0.12);
+        P.timers.push(setTimeout(() => {
+          if (!P.playing) return;
+          voice.noteOff();
+          P.onNote && P.onNote(-1);
+        }, t + ms - gap));
+      }
+      t += ms;
+    }
+    P.timers.push(setTimeout(() => {
+      if (!P.playing) return;
+      P.playing = false; P.timers = [];
+      voice.noteOff();
+      P.onNote && P.onNote(-1);
+      P.onEnd && P.onEnd();
+    }, t + 150));
+  };
+  return P;
+}
+const txPlayer = makePlayer(txVoice);
+const rxPlayer = makePlayer(rxVoice);
+
+/* ================================================================
+ * 鍵盤(2オクターブ・ステップ入力)
+ * ================================================================ */
+const WHITE_SEMIS = [0,2,4,5,7,9,11,12,14,16,17,19,21,23,24];
+const BLACK_SEMIS = [1,3,6,8,10,13,15,18,20,22];
+const BLACK_AFTER = [0,1,3,4,5,7,8,10,11,12];
 function buildKeyboard(el, interactive){
   const nW = WHITE_SEMIS.length;
   const keys = {};
@@ -827,59 +999,66 @@ function buildKeyboard(el, interactive){
   return keys;
 }
 const kbMainKeys = buildKeyboard($('kbMain'), true);
-/* 受信ミニ鍵盤:Pitch Monitorの直下に生成 */
 const kbRxWrap = document.createElement('div');
-kbRxWrap.className = 'kbWrap';
+kbRxWrap.className = 'kbWrap kbMini';
 kbRxWrap.style.height = '52px';
 kbRxWrap.style.marginTop = '8px';
+kbRxWrap.style.pointerEvents = 'none';
 document.querySelector('.noteScreen').parentNode.insertBefore(kbRxWrap, document.querySelector('.noteScreen').nextSibling);
 const kbRxKeys = buildKeyboard(kbRxWrap, false);
-kbRxWrap.style.pointerEvents = 'none';
-
-/* ---- 送信演奏状態(単音・後着優先/semi基準・スケール対応) ---- */
-let txArmed = false;
-let heldStack = [];          // 押下中のsemi(後着優先)
-let curTxSemi = -1;          // -1 = 消灯
-function txSetSemi(semi){
-  if (semi === curTxSemi) return;
-  curTxSemi = semi;
-  const sc = SCALES[txScale];
-  if (semi < 0){
-    setSurface(0);
-    $('nxTxNote').textContent = '---';
-    $('nxTxLevel').textContent = '--';
-    $('nxTxPct').textContent = '---';
-    if ($('txMonitor').checked) txVoice.noteOff();
-  } else {
-    const lvl = sc.semis.indexOf(semi) + 1;
-    const v = lvl / sc.semis.length;
-    setSurface(v);
-    $('nxTxNote').textContent = semiName(semi);
-    $('nxTxLevel').textContent = `${lvl}`;
-    $('nxTxPct').textContent = Math.round(v * 100);
-    if ($('txMonitor').checked) txVoice.noteOn(semiFreq(semi, 0));
-  }
+function hlMain(semi){
   for (const s in kbMainKeys) kbMainKeys[s].classList.toggle('down', +s === semi);
 }
-function noteDown(semi){
+function hlRx(semi){
+  for (const s in kbRxKeys) kbRxKeys[s].classList.toggle('lit', +s === semi);
+}
+
+/* ================================================================
+ * スコアバッファ(送信側)
+ * ================================================================ */
+const score = { tempo: 120, events: [] };   // events: {p:0..25, d:0..7}
+function estSeconds(){
+  const bytes = 1 + score.events.length;
+  const bits = PREAMBLE_BITS + 16 + (1 + bytes + 2) * 16;
+  const bps = +$('bpsSel').value;
+  return bits / bps + 1.9;
+}
+function evText(ev){
+  return (ev.p > 0 ? semiName(ev.p - 1) : 'REST') + ' ' + DURS[ev.d].name;
+}
+function renderScore(){
+  const n = score.events.length;
+  $('lcdCount').textContent = n;
+  $('lcdNote').textContent = n ? (score.events[n-1].p > 0 ? semiName(score.events[n-1].p - 1) : 'RST') : '---';
+  $('lcdEst').textContent = n ? estSeconds().toFixed(0) : '--';
+  const tail = score.events.slice(-7).map(ev => `<bdi>${evText(ev)}</bdi>`).join('<bdi> · </bdi>');
+  $('scoreLine').innerHTML = tail || '<bdi>EMPTY ── TAP KEYS TO ADD NOTES</bdi>';
+  $('scoreLine2').textContent = `♩=${score.tempo} · ${n}/254 NOTES · EST ${n ? estSeconds().toFixed(1) : '-'}S @${$('bpsSel').value}BPS`;
+}
+function appendEvent(p){
   if (needPower()) return;
-  if (player.running) stopPlayer();   // 手動演奏が自動演奏に割り込んだら停止
-  if (SCALES[txScale].semis.indexOf(semi) < 0){
-    showHint('KEY NOT IN CURRENT SCALE (' + SCALES[txScale].name + ')');
-    return;
-  }
-  if (!heldStack.includes(semi)) heldStack.push(semi);
-  txVoice.ensure();
-  if (!txArmed){ showHint('SET TRANSMIT ON TO EMIT LIGHT (MONITOR TONE ONLY)'); }
-  txSetSemi(heldStack[heldStack.length - 1]);
+  if (sending){ showHint('SENDING ── WAIT OR STOP'); return; }
+  if (score.events.length >= 254){ showHint('SCORE FULL (254 NOTES)'); return; }
+  score.events.push({ p, d: +$('durSel').value });
+  renderScore();
 }
-function noteUp(semi){
-  heldStack = heldStack.filter(x => x !== semi);
-  txSetSemi(heldStack.length ? heldStack[heldStack.length - 1] : -1);
-}
+$('restBtn').onclick = () => appendEvent(0);
+$('undoBtn').onclick = () => {
+  if (needPower()) return;
+  score.events.pop(); renderScore();
+};
+$('clearBtn').onclick = () => {
+  if (needPower()) return;
+  score.events = []; renderScore();
+  showHint('SCORE CLEARED');
+};
+$('tempoSel').addEventListener('change', () => { score.tempo = +$('tempoSel').value; renderScore(); });
+$('bpsSel').addEventListener('change', renderScore);
+
+/* 鍵盤ステップ入力(押下=追加+試聴) */
 (function bindKb(){
   const el = $('kbMain');
-  let activePointer = new Map();
+  let activeSemi = -1;
   function semiAt(ev){
     const target = document.elementFromPoint(ev.clientX, ev.clientY);
     if (target && target.dataset && target.dataset.semi !== undefined) return +target.dataset.semi;
@@ -888,64 +1067,96 @@ function noteUp(semi){
   el.addEventListener('pointerdown', ev => {
     const semi = semiAt(ev);
     if (semi === null) return;
-    el.setPointerCapture(ev.pointerId);
-    activePointer.set(ev.pointerId, semi);
-    noteDown(semi);
+    if (needPower()) return;
+    activeSemi = semi;
+    txVoice.ensure();
+    hlMain(semi);
+    if ($('txMonitor').checked){ txVoice.setTone(0); txVoice.noteOn(semiFreq(semi, 0)); }
+    appendEvent(semi + 1);
     ev.preventDefault();
   });
-  el.addEventListener('pointermove', ev => {
-    if (!activePointer.has(ev.pointerId)) return;
-    const semi = semiAt(ev);
-    const prev = activePointer.get(ev.pointerId);
-    if (semi !== null && semi !== prev){
-      noteUp(prev);
-      activePointer.set(ev.pointerId, semi);
-      noteDown(semi);
-    }
-    ev.preventDefault();
-  });
-  function release(ev){
-    if (!activePointer.has(ev.pointerId)) return;
-    noteUp(activePointer.get(ev.pointerId));
-    activePointer.delete(ev.pointerId);
+  function release(){
+    if (activeSemi < 0) return;
+    activeSemi = -1;
+    hlMain(-1);
+    txVoice.noteOff();
   }
   el.addEventListener('pointerup', release);
   el.addEventListener('pointercancel', release);
+  el.addEventListener('pointerleave', release);
 })();
 const KEYMAP = {
   'z':0,'s':1,'x':2,'d':3,'c':4,'v':5,'g':6,'b':7,'h':8,'n':9,'j':10,'m':11,',':12,
-  'q':0,'2':1,'w':2,'3':3,'e':4,'r':5,'5':6,'t':7,'6':8,'y':9,'7':10,'u':11,'i':12
+  'q':12,'2':13,'w':14,'3':15,'e':16,'r':17,'5':18,'t':19,'6':20,'y':21,'7':22,'u':23,'i':24
 };
-const kbDownSet = new Set();
 window.addEventListener('keydown', ev => {
   if (ev.repeat) return;
   if (/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) return;
   const semi = KEYMAP[ev.key.toLowerCase()];
-  if (semi === undefined) return;
-  if (!powered) return;
-  kbDownSet.add(ev.key.toLowerCase());
-  noteDown(semi);
+  if (semi === undefined || needPower()) return;
+  hlMain(semi);
+  if ($('txMonitor').checked){ txVoice.setTone(0); txVoice.noteOn(semiFreq(semi, 0)); }
+  appendEvent(semi + 1);
   ev.preventDefault();
 });
 window.addEventListener('keyup', ev => {
-  const k = ev.key.toLowerCase();
-  if (!kbDownSet.has(k)) return;
-  kbDownSet.delete(k);
-  const semi = KEYMAP[k];
-  if (semi !== undefined) noteUp(semi);
+  if (KEYMAP[ev.key.toLowerCase()] !== undefined){ hlMain(-1); txVoice.noteOff(); }
 });
 
+/* ---- プリセットスコア(パブリックドメイン/units=8分音符換算から変換) ---- */
+const U2D = {1:1, 2:3, 3:4, 4:5, 6:6, 8:7};
+function tuneToScore(raw, tempo){
+  return { tempo, events: raw.map(([semi, u]) => ({ p: semi < 0 ? 0 : semi + 1, d: U2D[u] !== undefined ? U2D[u] : 3 })) };
+}
+const TUNES = [
+  { name:'ODE TO JOY', tempo:130, raw:[
+    [4,2],[4,2],[5,2],[7,2],[7,2],[5,2],[4,2],[2,2],[0,2],[0,2],[2,2],[4,2],[4,3],[2,1],[2,4],
+    [4,2],[4,2],[5,2],[7,2],[7,2],[5,2],[4,2],[2,2],[0,2],[0,2],[2,2],[4,2],[2,3],[0,1],[0,4]]},
+  { name:'TWINKLE', tempo:115, raw:[
+    [0,2],[0,2],[7,2],[7,2],[9,2],[9,2],[7,4],[5,2],[5,2],[4,2],[4,2],[2,2],[2,2],[0,4],
+    [7,2],[7,2],[5,2],[5,2],[4,2],[4,2],[2,4],[7,2],[7,2],[5,2],[5,2],[4,2],[4,2],[2,4],
+    [0,2],[0,2],[7,2],[7,2],[9,2],[9,2],[7,4],[5,2],[5,2],[4,2],[4,2],[2,2],[2,2],[0,4]]},
+];
+$('loadBtn').onclick = () => {
+  if (needPower()) return;
+  const t = TUNES[+$('tuneSel').value];
+  const sc = tuneToScore(t.raw, t.tempo);
+  score.tempo = sc.tempo;
+  score.events = sc.events;
+  // テンポロールを近い値に合わせる
+  const opts = [...$('tempoSel').options].map(o => +o.value);
+  let best = 0;
+  for (let i = 0; i < opts.length; i++)
+    if (Math.abs(opts[i] - sc.tempo) < Math.abs(opts[best] - sc.tempo)) best = i;
+  $('tempoSel').selectedIndex = best;
+  score.tempo = opts[best];
+  syncRollers();
+  renderScore();
+  showHint('LOADED: ' + t.name);
+};
+
+/* ---- 送信プレビュー ---- */
+txPlayer.onNote = semi => hlMain(semi);
+txPlayer.onEnd = () => $('prevKey').classList.remove('lit');
+$('prevKey').onclick = () => {
+  if (needPower()) return;
+  if (txPlayer.playing){ txPlayer.stop(); return; }
+  if (score.events.length === 0){ showHint('SCORE EMPTY'); return; }
+  txVoice.ensure(); txVoice.setTone(0);
+  $('prevKey').classList.add('lit');
+  txPlayer.play(score, null, () => !$('txMonitor').checked && false);
+};
+
 /* ================================================================
- * 発光面(ポップアップ優先/全画面フォールバック)
+ * 発光面(ポップアップ/全画面)+点滅送信
  * ================================================================ */
 let popWin = null;
 $('popOpen').onclick = () => {
   if (needPower()) return;
-  // 2段階スイッチ:ON=開く/OFF=閉じる
-  if (popWin && !popWin.closed) { try { popWin.close(); } catch(e){} popWin = null; return; }
+  if (popWin && !popWin.closed){ try { popWin.close(); } catch(e){} popWin = null; return; }
   popWin = window.open('', 'telephotoneTxWin',
     'width=440,height=440,menubar=no,toolbar=no,location=no,status=no');
-  if (!popWin) { showHint('POPUP BLOCKED ── ALLOW POPUPS IN BROWSER SETTINGS'); return; }
+  if (!popWin){ showHint('POPUP BLOCKED ── ALLOW POPUPS IN BROWSER SETTINGS'); return; }
   const d = popWin.document;
   d.open();
   d.write('<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8">' +
@@ -954,19 +1165,15 @@ $('popOpen').onclick = () => {
     '#i{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);color:#8a877e;' +
     'background:rgba(25,25,25,.85);padding:7px 16px;border-radius:18px;font-size:12px;' +
     'white-space:nowrap;pointer-events:none;letter-spacing:.08em;}</style></head>' +
-    '<body><div id="i">STANDBY ── SET TRANSMIT ON AND PLAY</div></body></html>');
+    '<body><div id="i">STANDBY ── SEND A SCORE</div></body></html>');
   d.close();
 };
 setInterval(() => {
   $('popOpen').classList.toggle('lit', !!(popWin && !popWin.closed));
 }, 400);
-
-let wakeLockTx = null;
 function popAlive(){ return !!(popWin && !popWin.closed); }
-function setSurface(v){
-  if (!txArmed && !calRunning) return;
-  const c = Math.round(Math.max(0, Math.min(1, v)) * 255);
-  const col = `rgb(${c},${c},${c})`;
+function surface(v){
+  const col = v ? '#fff' : '#000';
   if (popAlive()) popWin.document.body.style.background = col;
   else if ($('flash').classList.contains('on')) $('flash').style.background = col;
 }
@@ -979,87 +1186,69 @@ function setPopInfo(txt){
     el.style.display = txt ? 'block' : 'none'; if (txt) el.textContent = txt;
   }
 }
-function disarmTx(){
-  txArmed = false;
-  $('txKey').classList.remove('lit');
-  if (popAlive()){ popWin.document.body.style.background = '#000'; setPopInfo('STANDBY ── SET TRANSMIT ON AND PLAY'); }
-  $('flash').classList.remove('on');
-  if (document.fullscreenElement) document.exitFullscreen().catch(()=>{});
-  try { wakeLockTx?.release(); } catch(e){}
-}
-$('txKey').onclick = async () => {
-  if (needPower()) return;
-  if (txArmed){ disarmTx(); return; }
-  txArmed = true;
-  $('txKey').classList.add('lit');
-  txVoice.ensure();
+
+let sending = false, sendRaf = null, wakeLockTx = null;
+async function startSend(){
+  if (score.events.length === 0){ showHint('SCORE EMPTY ── TAP KEYS OR LOAD A PRESET'); return; }
+  const payload = [Math.max(40, Math.min(240, score.tempo)),
+    ...score.events.map(ev => ((ev.d & 7) << 5) | (ev.p & 31))];
+  const hb = bitsToHalfbits(buildFrameBits(payload));
+  const bps = +$('bpsSel').value;
+  const halfT = 1000 / (2 * bps);
+  const LEAD = 1500, TAIL = 400;
+  sending = true;
+  $('sendKey').classList.add('lit');
   if (!popAlive()){
     $('flash').classList.add('on');
     $('flash').style.background = '#000';
-    setPopInfo('FULLSCREEN EMIT ── PLAY PC KEYS / CLICK TO STOP');
-    $('flash').onclick = () => disarmTx();
+    $('flash').onclick = stopSend;
     try { await document.documentElement.requestFullscreen({ navigationUI: 'hide' }); } catch(e){}
-  } else {
-    setPopInfo('');
   }
   try { wakeLockTx = await navigator.wakeLock?.request('screen'); } catch(e){}
-  txSetSemi(-1);
-  setSurface(0);
-};
-
-/* ---- 較正光(最暗 → 基準光(40%)(v=0.4) → 最明 ── 各2秒) ---- */
-let calRunning = false, calRaf = null;
-$('txCal').onclick = async () => {
-  if (needPower()) return;
-  if (calRunning){ stopCalTx(); return; }
-  calRunning = true;
-  $('txCal').classList.add('lit');
-  if (!popAlive() && !txArmed){
-    $('flash').classList.add('on');
-    $('flash').onclick = stopCalTx;
-    try { await document.documentElement.requestFullscreen({ navigationUI: 'hide' }); } catch(e){}
-  }
-  // 全段キャリブレーション:全音高レベルを1段ずつ実測させる(黒→各段1.1秒→黒)
-  const N = SCALES[txScale].semis.length;
-  const seq = [{v:0, ms:800}];
-  for (let i = 0; i <= N; i++) seq.push({v: i / N, ms: 1100});
-  seq.push({v:0, ms:600});
-  const marks = []; let acc = 0;
-  for (const s of seq){ acc += s.ms; marks.push(acc); }
-  const t0 = performance.now();
+  setPopInfo('SENDING SCORE ── DO NOT STARE');
+  setStatus(`SENDING ── ${score.events.length} NOTES @${bps}BPS (${estSeconds().toFixed(0)}S)`);
   const raf = popAlive() ? popWin.requestAnimationFrame.bind(popWin) : requestAnimationFrame;
-  setPopInfo('CAL LIGHT EMITTING ── DO NOT STARE');
+  const t0 = performance.now();
+  const total = LEAD + hb.length * halfT + TAIL;
   function frame(){
-    if (!calRunning) return;
+    if (!sending) return;
+    if (popAlive() && popWin.closed){ stopSend(); return; }
     const el = performance.now() - t0;
-    if (el >= acc){ stopCalTx(); return; }
-    let idx = 0;
-    while (idx < marks.length && el >= marks[idx]) idx++;
-    const seg = seq[Math.min(idx, seq.length - 1)];
-    const c = Math.round(seg.v * 255);
-    const col = `rgb(${c},${c},${c})`;
-    if (popAlive()) popWin.document.body.style.background = col;
-    else $('flash').style.background = col;
-    calRaf = raf(frame);
+    if (el >= total){ stopSend(true); return; }
+    let v = 0;
+    if (el >= LEAD){
+      const idx = Math.floor((el - LEAD) / halfT);
+      v = idx < hb.length ? hb[idx] : 0;
+    }
+    surface(v);
+    sendRaf = raf(frame);
   }
-  calRaf = raf(frame);
-};
-function stopCalTx(){
-  calRunning = false;
-  try { cancelAnimationFrame(calRaf); if (popAlive()) popWin.cancelAnimationFrame(calRaf); } catch(e){}
-  $('txCal').classList.remove('lit');
-  if (popAlive()){
-    popWin.document.body.style.background = '#000';
-    setPopInfo(txArmed ? '' : 'STANDBY ── SET TRANSMIT ON AND PLAY');
-  }
-  if (!txArmed){
-    $('flash').classList.remove('on');
-    if (document.fullscreenElement) document.exitFullscreen().catch(()=>{});
-  }
+  sendRaf = raf(frame);
 }
+function stopSend(done){
+  if (!sending) return;
+  sending = false;
+  try { cancelAnimationFrame(sendRaf); if (popAlive()) popWin.cancelAnimationFrame(sendRaf); } catch(e){}
+  $('sendKey').classList.remove('lit');
+  surface(0);
+  if (popAlive()) setPopInfo('STANDBY ── SEND A SCORE');
+  else {
+    $('flash').classList.remove('on');
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  }
+  try { wakeLockTx?.release(); } catch(e){}
+  setStatus(done === true
+    ? 'SEND COMPLETE ── RECEIVER SHOULD BE PLAYING'
+    : 'SYSTEM READY ── BUILD A SCORE OR PRESS RECEIVE');
+}
+$('sendKey').onclick = () => {
+  if (needPower()) return;
+  if (sending){ stopSend(); return; }
+  startSend();
+};
 
 /* ================================================================
- * 受信部
+ * 受信部(カメラ+復調+自動演奏)
  * ================================================================ */
 let stream = null, track = null, rafId = null, wakeLockRx = null;
 let _fpsTimes = [];
@@ -1067,93 +1256,66 @@ let roi = { x: 0.5, y: 0.5, size: 0.20 };
 const sampleCanvas = document.createElement('canvas');
 sampleCanvas.width = 8; sampleCanvas.height = 8;
 const sctx = sampleCanvas.getContext('2d', { willReadFrequently: true });
-
-let calib = null;            // {lo, hi, expected[]} ── expectedは全段実測値
-let calCapture = null;
-let rxState = 0;             // 確定レベル(0=消灯)
-let rxSemi = -1;             // 確定semi
-let candState = 0, candCount = 0;
-let driftFrames = 0;
+let rxScore = null;
 
 $('rxTone').onchange = () => rxVoice.setTone(+$('rxTone').value);
 $('rxVol').oninput = () => rxVoice.setVolume(+$('rxVol').value / 100);
-$('rxMute').onchange = () => { if ($('rxMute').checked) rxVoice.noteOff(); else if (rxSemi >= 0) rxPlay(rxSemi); };
-$('rxTrans').onchange = () => { if (rxSemi >= 0 && !$('rxMute').checked) rxPlay(rxSemi); };
 rxVoice.setVolume(0.7);
 
-function rxN(){ return SCALES[rxScale].semis.length; }
-
-/* 期待輝度テーブルは全段実測(finishCalib)で構築する ── モデル近似なし */
-function classify(l){
-  const exp = calib.expected;
-  const N = exp.length - 1;
-  let best = 0, bd = Infinity;
-  for (let s = 0; s <= N; s++){
-    const d = Math.abs(l - exp[s]);
-    if (d < bd){ bd = d; best = s; }
-  }
-  let gap = Infinity;
-  if (best > 0) gap = Math.min(gap, exp[best] - exp[best - 1]);
-  if (best < N) gap = Math.min(gap, exp[best + 1] - exp[best]);
-  const conf = gap > 0 ? 1 - (bd / (gap / 2)) : 0;
-  return { state: best, conf: Math.max(0, Math.min(1, conf)) };
-}
-/* スケール切替時:較正済みなら期待テーブルを組み直す */
-$('rxScaleSel').addEventListener('change', () => {
-  rxScale = +$('rxScaleSel').value;
-  if (calib){
-    calib = null;                       // 実測テーブルは段数に紐づくため無効化
-    $('dgCal').textContent = 'RAW';
-    $('dgCal').className = 'v dim';
-    showHint('SCALE CHANGED ── RECAPTURE CALIBRATION');
-  }
-  candState = 0; candCount = 0;
-  commitState(0);
-});
-$('txScaleSel').addEventListener('change', () => {
-  txScale = +$('txScaleSel').value;
-  heldStack = [];
-  txSetSemi(-1);
-});
-
-/* ---- 発音制御 ---- */
-function rxPlay(semi){
-  rxVoice.setTone(+$('rxTone').value);
-  rxVoice.noteOn(semiFreq(semi, +$('rxTrans').value));
-}
-function commitState(s){
-  if (s === rxState) return;
-  rxState = s;
-  rxSemi = s > 0 ? SCALES[rxScale].semis[s - 1] : -1;
-  const noteEl = $('rxNote');
-  if (s === 0){
-    noteEl.textContent = '──';
-    noteEl.classList.add('off');
-    $('rxSub').innerHTML = 'KEY OFF<br>&nbsp;';
-    if (!$('rxMute').checked) rxVoice.noteOff();
+rxPlayer.onNote = semi => {
+  if (semi >= 0){
+    $('rxNote').textContent = semiName(semi);
+    $('rxNote').classList.remove('off');
   } else {
-    const trans = +$('rxTrans').value;
-    noteEl.textContent = semiName(rxSemi);
-    noteEl.classList.remove('off');
-    const f = semiFreq(rxSemi, trans);
-    $('rxSub').innerHTML = `${f.toFixed(1)} Hz${trans ? ` (T${trans > 0 ? '+' : ''}${trans})` : ''}<br>LEVEL ${s}/${rxN()}`;
-    if (!$('rxMute').checked) rxPlay(rxSemi);
+    $('rxNote').textContent = '──';
+    $('rxNote').classList.add('off');
   }
-  for (const semi in kbRxKeys) kbRxKeys[semi].classList.toggle('lit', +semi === rxSemi);
+  hlRx(semi);
+};
+rxPlayer.onEnd = () => {
+  $('rxPlayKey').classList.remove('lit');
+  if (rxScore) $('rxSub').innerHTML = `SCORE ${rxScore.events.length} NOTES<br>♩=${rxScore.tempo} · PLAY TO REPLAY`;
+};
+function playRxScore(){
+  if (!rxScore) return;
+  rxVoice.ensure();
+  rxVoice.setTone(+$('rxTone').value);
+  $('rxPlayKey').classList.add('lit');
+  $('rxSub').innerHTML = `PLAYING ${rxScore.events.length} NOTES<br>♩=${rxScore.tempo}`;
+  rxPlayer.play(rxScore, () => +$('rxTrans').value, () => $('rxMute').checked);
 }
+$('rxPlayKey').onclick = () => {
+  if (needPower()) return;
+  if (rxPlayer.playing){ rxPlayer.stop(); return; }
+  if (!rxScore){ showHint('NO SCORE RECEIVED YET'); return; }
+  playRxScore();
+};
 
-/* ---- カメラ ---- */
+const demod = new Demodulator(ev => {
+  if (ev.type !== 'message') return;
+  if (!ev.crcOk || ev.payload.length < 2){
+    setStatus('RX ERROR ── CRC MISMATCH · ASK SENDER TO RESEND');
+    return;
+  }
+  const tempo = Math.max(40, Math.min(240, ev.payload[0]));
+  const events = [];
+  for (let i = 1; i < ev.payload.length; i++){
+    const b = ev.payload[i];
+    const p = b & 31, d = (b >> 5) & 7;
+    if (p > 25) continue;
+    events.push({ p, d });
+  }
+  if (!events.length){ setStatus('RX ERROR ── EMPTY SCORE'); return; }
+  rxScore = { tempo, events };
+  setStatus(`SCORE RECEIVED ── ${events.length} NOTES · ♩=${tempo} · PLAYING`);
+  playRxScore();
+});
+
 $('rxKey').onclick = () => {
   if (needPower()) return;
-  // iOS Safari対策:getUserMediaのawaitで操作文脈が切れる前に同期で音声解錠
   rxVoice.ensure();
   if (stream) stopCamera(); else startCamera();
 };
-/* iOS Safari対策:通電中は任意のタッチ/クリックで suspended を解除し続ける */
-['pointerdown', 'touchstart', 'touchend', 'keydown'].forEach(ev =>
-  document.addEventListener(ev, () => {
-    if (powered){ txVoice.ensure(); rxVoice.ensure(); }
-  }, { passive: true }));
 async function startCamera(){
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
     showHint('CAMERA API UNAVAILABLE ── OPEN VIA HTTPS OR LOCALHOST (NOT file://)');
@@ -1165,7 +1327,6 @@ async function startCamera(){
       audio: false
     });
   } catch(e){ showHint('CAMERA START FAILED: ' + e.message); return; }
-  rxVoice.ensure();
   const video = $('video');
   video.srcObject = stream;
   track = stream.getVideoTracks()[0];
@@ -1178,24 +1339,21 @@ async function startCamera(){
   setupRoiCanvas();
   applyCameraTuning();
   startSampling();
-  setStatus('signal', calib ? 'RECEIVING (CALIBRATED)' : 'CAMERA ACTIVE ── CAPTURE CALIBRATION');
+  setStatus('RECEIVING ── AIM ROI AT THE BLINKING WINDOW');
 }
 function stopCamera(){
   stopSampling();
   stream?.getTracks().forEach(t => t.stop());
   stream = null; track = null;
+  demod.reset();
   $('camView').style.display = 'none';
   $('roiCanvas').style.display = 'none';
   $('camIdle').style.display = 'flex';
   $('rxKey').classList.remove('lit');
-  calCapture = null;
-  commitState(0);
   try { wakeLockRx?.release(); } catch(e){}
   sysInfo = '';
-  setStatus('', powered ? 'SYSTEM READY ── PRESS RECEIVE TO BECOME A RECEIVER' : '');
+  setStatus(powered ? 'SYSTEM READY ── BUILD A SCORE OR PRESS RECEIVE' : '');
 }
-
-/* ---- カメラ制御:AE/AWB/AF固定 ---- */
 async function applyCameraTuning(){
   if (!track) return;
   const caps = track.getCapabilities ? track.getCapabilities() : {};
@@ -1212,15 +1370,9 @@ async function applyCameraTuning(){
       await track.applyConstraints({ advanced: [adv] });
       notes.push('AE LOCK OK');
     } else {
-      notes.push('AE LOCK N/A ── CAPTURE AFTER AE SETTLES ON CAL LIGHT');
+      notes.push('AE AUTO (BINARY BLINK IS TOLERANT)');
     }
-  } catch(e){ notes.push('AE LOCK FAILED (ABSORBED BY CAL)'); }
-  try {
-    if (caps.whiteBalanceMode && caps.whiteBalanceMode.includes('manual')){
-      await track.applyConstraints({ advanced: [{ whiteBalanceMode: 'manual' }] });
-      notes.push('WB LOCK OK');
-    }
-  } catch(e){}
+  } catch(e){ notes.push('AE LOCK FAILED (OK FOR BLINK)'); }
   try {
     if (caps.focusMode && caps.focusMode.includes('manual')){
       await track.applyConstraints({ advanced: [{ focusMode: 'manual' }] });
@@ -1236,8 +1388,6 @@ async function applyCameraTuning(){
   } else { z.disabled = true; notes.push('ZOOM N/A'); }
   setSysInfo(notes.join(' / '));
 }
-
-/* ---- ROI ---- */
 let roiReady = false;
 function setupRoiCanvas(){
   if (roiReady) return;
@@ -1278,7 +1428,7 @@ function drawRoiOverlay(luma){
   const w = rc.width, h = rc.height;
   const s = roi.size * Math.min(w, h);
   const x = roi.x * w - s / 2, y = roi.y * h - s / 2;
-  ctx.strokeStyle = rxState !== 0 ? '#71f0a0' : '#e8e6e0';
+  ctx.strokeStyle = demod.state === 'frame' ? '#71f0a0' : '#e8e6e0';
   ctx.lineWidth = 1.5 * devicePixelRatio;
   ctx.strokeRect(x, y, s, s);
   ctx.fillStyle = 'rgba(232,230,224,.9)';
@@ -1286,8 +1436,6 @@ function drawRoiOverlay(luma){
   const ty = y - 6 * devicePixelRatio < 10 ? y + s + 13 * devicePixelRatio : y - 6 * devicePixelRatio;
   ctx.fillText(`LUM ${luma.toFixed(1)}`, x + 4 * devicePixelRatio, ty);
 }
-
-/* ---- サンプリング(毎フレーム判別 ── 低遅延) ---- */
 function sampleLuma(video){
   const vw = video.videoWidth, vh = video.videoHeight;
   if (!vw) return null;
@@ -1303,15 +1451,6 @@ function sampleLuma(video){
   for (let i = 0; i < d.length; i += 4) sum += 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
   return sum / 64;
 }
-/* 3フレーム中央値 ── 単発ノイズ(手ブレ・圧縮ゆらぎ)を除去。遅延は1フレームのみ */
-const _medBuf = [];
-function median3(x){
-  _medBuf.push(x);
-  if (_medBuf.length > 3) _medBuf.shift();
-  if (_medBuf.length < 3) return x;
-  const [a, b, c] = _medBuf;
-  return Math.max(Math.min(a, b), Math.min(Math.max(a, b), c));
-}
 function startSampling(){
   const video = $('video');
   const usingRVFC = 'requestVideoFrameCallback' in HTMLVideoElement.prototype;
@@ -1320,38 +1459,22 @@ function startSampling(){
     const t = performance.now();
     _fpsTimes.push(t);
     while (_fpsTimes.length && t - _fpsTimes[0] > 1000) _fpsTimes.shift();
-    const raw = sampleLuma(video);
-    if (raw !== null){
-      const luma = median3(raw);
-      if (calCapture){
-        calCapture.samples.push({ t, l: raw });
-        if (t >= calCapture.until) finishCalib();
-      } else if (calib){
-        const { state, conf } = classify(luma);
-        const need = +$('stableN').value;
-        if (state === candState) candCount++;
-        else if (conf >= 0.20){ candState = state; candCount = 1; }
-        // ↑信号余裕ゲート:境界ぎわの低確度フレームは新候補になれない(誤発音抑制)
-        if (candCount >= need) commitState(candState);
-        // 消灯アンカーの自動ドリフト補正:環境光の変化は全段にほぼ加算的に乗るため
-        // キーオフ中の暗レベル差分でテーブル全体を平行移動する(リピートキャリブレーションの簡易形)
-        if (state === 0 && rxState === 0){
-          const gap0 = calib.expected[1] - calib.expected[0];
-          const d = luma - calib.expected[0];
-          if (Math.abs(d) < gap0 * 0.6){
-            const shift = d * 0.02;
-            for (let i = 0; i < calib.expected.length; i++) calib.expected[i] += shift;
-            calib.lo = calib.expected[0];
-          }
-        }
-        $('dgLevel').textContent = state === 0 ? 'OFF' : state;
-        const pct = Math.round(conf * 100);
-        $('dgConf').textContent = pct;
-        $('dgConf').className = 'v ' + (pct >= 60 ? 'good' : pct >= 30 ? 'warn' : 'bad');
-      }
+    const luma = sampleLuma(video);
+    if (luma !== null){
+      demod.feed(t, luma);
       drawRoiOverlay(luma);
       $('dgFps').textContent = _fpsTimes.length;
       $('dgFps').className = 'v ' + (_fpsTimes.length >= 25 ? 'good' : 'warn');
+      const c = Math.round(demod.range || 0);
+      $('dgSig').textContent = c;
+      $('dgSig').className = 'v ' + (c >= 40 ? 'good' : c >= 8 ? 'warn' : 'bad');
+      const map = { no_signal:'IDLE', idle:'SIG', locked:'LOCK', frame:'RX' };
+      $('dgState').textContent = map[demod.state] || '–';
+      $('dgState').className = 'v ' + (demod.state === 'frame' ? 'good' : demod.state === 'locked' ? 'grn' : 'dim');
+      let bits = 0;
+      if (demod.state === 'locked') bits = demod.bitBuf.length;
+      else if (demod.state === 'frame') bits = demod.frameBits ? demod.frameBits.length : 0;
+      $('dgBits').textContent = bits;
     }
     if (usingRVFC) video.requestVideoFrameCallback(onFrame);
     else rafId = requestAnimationFrame(onFrame);
@@ -1361,244 +1484,10 @@ function startSampling(){
 }
 function stopSampling(){ if (rafId) cancelAnimationFrame(rafId); rafId = null; }
 
-/* ---- 較正取込(8秒 → 3プラトー ── 最暗/基準光(40%)/最明) ---- */
-class PlateauTracker {
-  constructor(jumpThr){ this.jumpThr = jumpThr; this.cur = null; this.done = []; }
-  feed(t, l){
-    if (!this.cur){ this.cur = {sum:l, sum2:l*l, n:1, t0:t, t1:t}; return null; }
-    const mean = this.cur.sum / this.cur.n;
-    if (Math.abs(l - mean) > this.jumpThr){
-      const closed = this._close();
-      this.cur = {sum:l, sum2:l*l, n:1, t0:t, t1:t};
-      return closed;
-    }
-    this.cur.sum += l; this.cur.sum2 += l*l; this.cur.n++; this.cur.t1 = t;
-    return null;
-  }
-  _close(){
-    const c = this.cur; this.cur = null;
-    if (!c) return null;
-    const dur = c.t1 - c.t0;
-    if (dur < 320 || c.n < 6) return null;
-    const mean = c.sum / c.n;
-    const varc = Math.max(0, c.sum2 / c.n - mean * mean);
-    const p = {mean, std: Math.sqrt(varc), dur, n: c.n};
-    this.done.push(p);
-    return p;
-  }
-  finish(){ this._close(); return this.done; }
-}
-$('calBtn').onclick = () => {
-  if (needPower()) return;
-  if (!stream){ showHint('TURN RECEIVE ON FIRST (CAMERA)'); return; }
-  // 2段階スイッチ:取込中にOFFへ戻すと中断
-  if (calCapture){
-    calCapture = null;
-    $('calBtn').classList.remove('lit');
-    setStatus('signal', 'CAPTURE ABORTED');
-    return;
-  }
-  const capMs = (rxN() + 1) * 1100 + 3000;
-  calCapture = { samples: [], until: performance.now() + capMs };
-  $('calBtn').classList.add('lit');
-  commitState(0);
-  setStatus('rx', `CAPTURING FULL-SCALE CAL (${Math.round(capMs/1000)}S) ── NOW START CAL LIGHT ON TX`);
-};
-function finishCalib(){
-  const samples = calCapture.samples;
-  calCapture = null;
-  $('calBtn').classList.remove('lit');
-  const N = rxN();
-  let mn = Infinity, mx = -Infinity;
-  for (const sm of samples){ if (sm.l < mn) mn = sm.l; if (sm.l > mx) mx = sm.l; }
-  if (mx - mn < 12){
-    showHint('CAL FAILED ── NO LUMINANCE CHANGE. CHECK ROI / DISTANCE / BRIGHTNESS');
-    setStatus('signal', 'CAMERA ACTIVE ── RETRY CALIBRATION');
-    return;
-  }
-  // 階段の各段をプラトーとして抽出(段差しきい値=想定段差の半分)
-  const tracker = new PlateauTracker(Math.max(3, (mx - mn) / N / 2));
-  for (const sm of samples) tracker.feed(sm.t, sm.l);
-  let plats = tracker.finish().filter(pp => pp.dur >= 500);
-  // 時系列で上昇している区間のみ採用(末尾の黒などを落とす)
-  const asc = [];
-  for (const pp of plats){
-    if (asc.length === 0 || pp.mean > asc[asc.length - 1].mean) asc.push(pp);
-    else break;
-  }
-  if (asc.length !== N + 1){
-    showHint(`CAL FAILED ── GOT ${asc.length}/${N + 1} LEVELS. START CAPTURE FIRST, THEN CAL LIGHT (MATCH SCALE ON BOTH)`);
-    setStatus('signal', 'CAMERA ACTIVE ── RETRY CALIBRATION');
-    return;
-  }
-  // 期待値=実測値:モデル誤差ゼロの全段テーブル
-  calib = { expected: asc.map(pp => pp.mean), lo: asc[0].mean, hi: asc[N].mean };
-  candState = 0; candCount = 0; driftFrames = 0;
-  // 較正品質の自動診断:最小段差ギャップ÷ノイズσ(テスターと同じ思想)
-  const stds = asc.map(pp => pp.std).sort((a, b) => a - b);
-  const sigma = stds[stds.length >> 1];
-  let minGap = Infinity;
-  for (let i = 1; i < asc.length; i++) minGap = Math.min(minGap, asc[i].mean - asc[i - 1].mean);
-  const sep = sigma > 0 ? minGap / sigma : Infinity;
-  if (sep < 4){
-    $('dgCal').textContent = 'POOR';
-    $('dgCal').className = 'v warn';
-    showHint(`CAL OK BUT LOW SEPARATION (GAP/σ=${sep.toFixed(1)}) ── TRY DIATONIC/PENTA, CLOSER, OR TIGHTER ROI`);
-    setStatus('signal', `CAL MARGINAL ── GAP/σ=${sep.toFixed(1)} (WANT ≥4)`);
-  } else {
-    $('dgCal').textContent = 'OK';
-    $('dgCal').className = 'v good';
-    showHint(`CAL OK ── ${N + 1} LEVELS / GAP/σ=${sep === Infinity ? '∞' : sep.toFixed(1)}`);
-    setStatus('signal', `CAL OK ── READY TO RECEIVE (${N + 1} LEVELS / GAP/σ=${sep === Infinity ? '∞' : sep.toFixed(1)})`);
-  }
-}
-
-/* ---- 取扱説明書 ---- */
-$('manualOpen').onclick = () => {
-  const w = window.open('', 'tpv04Manual', 'width=560,height=720,menubar=no,toolbar=no,location=no');
-  if (!w) { showHint('ポップアップがブロックされました'); return; }
-  const d = w.document;
-  d.open();
-  d.write(`<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8">
-<title>Telephotone TPV-04 取扱説明書</title>
-<style>
-body{font-family:"Helvetica Neue",Helvetica,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
-  background:#ecebe6; color:#1d1c1a; margin:0; padding:32px 30px; line-height:2; font-size:13px;}
-h1{font-size:16px; letter-spacing:.3em; border-bottom:2px solid #1d1c1a; padding-bottom:10px;}
-h2{font-size:12px; letter-spacing:.24em; margin-top:30px; color:#1d1c1a;
-  border-left:3px solid #ff5400; padding-left:10px;}
-.plate{border:1px solid #8f8d85; padding:10px 16px; text-align:center; margin:16px 0;
-  background:#f2f1ec; font-family:ui-monospace,Menlo,monospace; font-size:11px; line-height:1.9;}
-ol,ul{padding-left:20px;}
-li{margin:4px 0;}
-b{color:#ff5400;}
-table{border-collapse:collapse; font-size:12px; margin:10px 0;}
-td,th{border:1px solid #c9c7bf; padding:4px 12px; text-align:left;}
-.foot{margin-top:34px; font-size:10px; color:#77756e; border-top:1px solid #c9c7bf;
-  padding-top:10px; letter-spacing:.1em;}
-</style></head><body>
-<h1>取扱説明書 ── TELEPHOTONE</h1>
-<div class="plate">Telephotone 　テレフォトン<br>型式:TPV-04<br>TELEPHONOVISION('26年製)</div>
-<p>本機は、画面の発光の強さ(輝度)で音高を遠くへ送る可視光楽器です。音声を電気でなく光で送る ──
-それが TELEPHONOVISION の TELEPHOTONE。本機の演奏層・制御層プロトコル一式は
-<b>LIDI規格(Light Instrument Digital Interface)</b> に準拠しています。</p>
-<h2>一、主電源</h2>
-<p>パネル右上の主電源を入れると各系統が稼働します。切ると送信・受信・発音のすべてが停止します。</p>
-<h2>二、原理(LIDI演奏層)</h2>
-<p>鍵盤を押すと発光窓が音高に対応した輝度で光り、受信機のカメラが輝度から音高を判別して即座に鳴らします。
-<b>光っている間、鳴る。</b>消灯すれば消音。音域は1オクターブ(C4〜C5・13音)+消灯の14状態です(スケールモードでさらに8段/6段に妥協可)。
-送信は単音のみですが、複数の受信機に異なる移調を設定すれば1音から和声が生まれます。</p>
-<h2>三、演奏手順</h2>
-<ol>
-<li><b>送信側:</b>主電源を入れ「発光窓」を開き、受信カメラへ正対。画面輝度は最大・自動輝度OFF</li>
-<li><b>受信側:</b>「受信」でカメラ起動、白枠(ROI)を発光面に合わせ「較正取込(CAPTURE)」を先に入れる</li>
-<li><b>受信側:</b>主電源を入れ「受信」でカメラ起動、白枠(ROI)を発光面に合わせ、較正光の発光中に「較正取込」</li>
-<li><b>送信側:</b>「演奏送信(TRANSMIT)」を入にして鍵盤を弾く(PCキー:下段ZXC…/上段Q2W…)</li>
-<li><b>受信側:</b>音が鳴り、音名と鍵盤ハイライトが表示されます</li>
-<li><b>iPhoneの場合:</b>本体側面のサイレントスイッチをOFF(着信音オン)にしてください。
-消音中はWeb Audioの音が出ません。音量ボタンも確認を</li>
-<li><b>自動演奏(AUTO PLAY):</b>内蔵の古典旋律(著作権消滅済み)を方向幕で選び、PLAYを入にすると
-自動送信します。LOOPで繰り返し。鍵盤に触れると自動演奏は停止します</li>
-</ol>
-<h2>四、受信機の設定(ローカル)</h2>
-<table>
-<tr><th>自機ID</th><td>A/B/C/D。将来の制御層コマンドの宛先になります</td></tr>
-<tr><th>音色バンク</th><td>1〜8番。音色データは光では送らず、番号で呼び出します(GM的思想)</td></tr>
-<tr><th>移調</th><td>半音単位。+4=長3度、+7=完全5度、-12=オクターブ下</td></tr>
-<tr><th>音量/ミュート</th><td>受信側の音量。制御層実装後は送信側からも指示可能(送信側が優先)</td></tr>
-</table>
-<h2>五、和声(マルチ受信機)</h2>
-<p>光はブロードキャストです。URLを開いた端末は何台でも同じ光を同時に受信できます。
-端末A=原音、B=+4、C=+7 とすれば送信1音から長三和音(平行和声・オルガヌム的)。
-端末ごとの数十msの発音ばらつきは、アンサンブルの自然な揺らぎとして許容する設計です。</p>
-<h2>六、較正について</h2>
-<p>演奏前の<b>全段キャリブレーション</b>で、全音高レベルを1段ずつ実際に発光・実測し、
-期待値テーブルを実測値そのもので構築します(モデル近似なし)。カメラのガンマや画面の階調特性の癖も
-すべて実測に織り込まれます。手順は受信側CAPTURE→送信側CAL LIGHTの順。送受のスケール設定を
-一致させてください。露出の完全マニュアルに非対応の機種(iOS Safari等)では、較正中にAEが安定した状態の
-値がそのまま基準になります。照明条件が変わったら較正をやり直してください。</p>
-<h2>七、安全上の注意</h2>
-<p><b>発光面を長時間直視しないでください。</b>演奏中は定常輝度が主体ですが、較正光および将来の制御層
-(モールス点滅コマンド)は明滅を伴います。光の点滅に敏感な方は発作等を誘発するおそれがあります。</p>
-<div class="foot">TELEPHONOVISION SERIES ── TPV-03 MABATAKI SIGNAL / TPV-04 TELEPHOTONE<br>
-本機はLIDI規格に準拠しています。輝度階調テスター(工程1)は telephotone_tester.html を参照。</div>
-</body></html>`);
-  d.close();
-};
-
 /* ================================================================
- * 自動演奏(シーケンサ)── パブリックドメインの古典旋律を内蔵
- * notes: [semi(0=C4..24=C6, -1=休符), units] / unit=最小拍のms
- * 同音連打の再打鍵のため各音末尾に短い消灯ギャップを挿入
- * (輝度が連続すると受信側で音が繋がるため ── LIDI演奏層の要件)
+ * 方向幕セレクタ
  * ================================================================ */
-/* ================================================================
- * 自動演奏 ── 1オクターブ(C4〜C5)に収まるパブリックドメインの旋律
- * いずれも実音域C4〜A4:CHROMA 13/DIATONIC 8 の両モードで演奏可能
- * ================================================================ */
-const TUNES = [
-  { name:'ODE TO JOY', unit:230, notes:[
-    [4,2],[4,2],[5,2],[7,2],[7,2],[5,2],[4,2],[2,2],[0,2],[0,2],[2,2],[4,2],[4,3],[2,1],[2,4],
-    [4,2],[4,2],[5,2],[7,2],[7,2],[5,2],[4,2],[2,2],[0,2],[0,2],[2,2],[4,2],[2,3],[0,1],[0,4],
-    [2,2],[2,2],[4,2],[0,2],[2,2],[4,1],[5,1],[4,2],[0,2],[2,2],[4,1],[5,1],[4,2],[2,2],[0,2],[2,2],[-1,2],
-    [4,2],[4,2],[5,2],[7,2],[7,2],[5,2],[4,2],[2,2],[0,2],[0,2],[2,2],[4,2],[2,3],[0,1],[0,6]]},
-  { name:'TWINKLE', unit:260, notes:[
-    [0,2],[0,2],[7,2],[7,2],[9,2],[9,2],[7,4],[5,2],[5,2],[4,2],[4,2],[2,2],[2,2],[0,4],
-    [7,2],[7,2],[5,2],[5,2],[4,2],[4,2],[2,4],[7,2],[7,2],[5,2],[5,2],[4,2],[4,2],[2,4],
-    [0,2],[0,2],[7,2],[7,2],[9,2],[9,2],[7,4],[5,2],[5,2],[4,2],[4,2],[2,2],[2,2],[0,6]]},
-];
-const player = { running:false, timers:[] };
-function stopPlayer(){
-  player.running = false;
-  player.timers.forEach(clearTimeout);
-  player.timers = [];
-  $('playKey').classList.remove('lit');
-  txSetSemi(-1);
-}
-function startPlayer(){
-  const tune = TUNES[+$('tuneSel').value];
-  player.running = true;
-  $('playKey').classList.add('lit');
-  let t = 250;
-  for (const [semi, units] of tune.notes){
-    const dur = units * tune.unit;
-    if (semi >= 0){
-      // 同音連打の再打鍵ギャップは最小限(拍感を崩さない)
-      const gap = Math.min(55, dur * 0.12);
-      player.timers.push(setTimeout(() => { if (player.running) txSetSemi(semi); }, t));
-      player.timers.push(setTimeout(() => { if (player.running) txSetSemi(-1); }, t + dur - gap));
-    }
-    t += dur;
-  }
-  player.timers.push(setTimeout(() => {
-    if (!player.running) return;
-    player.timers = [];
-    // ループは間髪入れず繋げず、一呼吸(2秒)置いてから次の周回へ
-    if ($('playLoop').checked) player.timers.push(setTimeout(startPlayer, 2000));
-    else stopPlayer();
-  }, t + 200));
-}
-$('playKey').onclick = () => {
-  if (needPower()) return;
-  if (player.running){ stopPlayer(); return; }
-  { const sc = SCALES[txScale].semis;
-    const tune = TUNES[+$('tuneSel').value];
-    if (!tune.notes.every(n => n[0] < 0 || sc.includes(n[0]))){
-      showHint('TUNE NOT PLAYABLE IN ' + SCALES[txScale].name + ' ── USE CHROMA/DIATONIC');
-      return;
-    } }
-  txVoice.ensure();
-  if (!txArmed) showHint('TRANSMIT IS OFF ── MONITOR TONE ONLY');
-  startPlayer();
-};
-/* 選曲を変えたら再生中は止める(幕を回して曲替え→PLAYで再スタート) */
-$('tuneSel').addEventListener('change', () => { if (player.running) stopPlayer(); });
-
-/* ================================================================
- * 方向幕セレクタ ── プルダウンを機械式ロール表示に置換
- * <select>は値の保管庫として非表示で残し、既存ロジックと互換を保つ。
- * 機械式部品のため通電に関係なく操作できる(実機挙動)。
- * ================================================================ */
+const rollers = {};
 function makeRoller(sel){
   sel.style.display = 'none';
   const wrap = document.createElement('div'); wrap.className = 'roller';
@@ -1629,18 +1518,89 @@ function makeRoller(sel){
   up.onclick = () => step(-1);
   dn.onclick = () => step(1);
   render();
+  rollers[sel.id] = render;
 }
-['tuneSel', 'txScaleSel', 'rxId', 'rxTone', 'rxTrans', 'stableN', 'rxScaleSel'].forEach(id => makeRoller($(id)));
+['tuneSel', 'durSel', 'tempoSel', 'bpsSel', 'rxId', 'rxTone', 'rxTrans'].forEach(id => makeRoller($(id)));
+function syncRollers(){ for (const id in rollers) rollers[id](); }
 
-/* ---- 筐体色の切り替え(ライト/ダークの比較用) ---- */
+/* ---- 筐体色 ---- */
 $('themeToggle').onclick = () => {
   const dark = document.body.classList.toggle('dark');
   $('themeToggle').textContent = dark ? '◑ LIGHT PANEL' : '◐ DARK PANEL';
 };
 
-/* ---- 初期状態:主電源OFF(スクリーン消灯・全系統停止) ---- */
-setStatus('', '');
+/* ---- 取扱説明書 ---- */
+$('manualOpen').onclick = () => {
+  const w = window.open('', 'tpv04Manual', 'width=560,height=720,menubar=no,toolbar=no,location=no');
+  if (!w){ showHint('POPUP BLOCKED'); return; }
+  const d = w.document;
+  d.open();
+  d.write(`<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8">
+<title>Telephotone TPV-04 取扱説明書</title>
+<style>
+body{font-family:"Helvetica Neue",Helvetica,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+  background:#ecebe6; color:#1d1c1a; margin:0; padding:32px 30px; line-height:2; font-size:13px;}
+h1{font-size:16px; letter-spacing:.3em; border-bottom:2px solid #1d1c1a; padding-bottom:10px;}
+h2{font-size:12px; letter-spacing:.24em; margin-top:30px;
+  border-left:3px solid #0f9c32; padding-left:10px;}
+.plate{border:1px solid #8f8d85; padding:10px 16px; text-align:center; margin:16px 0;
+  background:#f2f1ec; font-family:ui-monospace,Menlo,monospace; font-size:11px; line-height:1.9;}
+ol,ul{padding-left:20px;} li{margin:4px 0;}
+b{color:#0f9c32;}
+table{border-collapse:collapse; font-size:12px; margin:10px 0;}
+td,th{border:1px solid #c9c7bf; padding:4px 12px; text-align:left;}
+.foot{margin-top:34px; font-size:10px; color:#77756e; border-top:1px solid #c9c7bf;
+  padding-top:10px; letter-spacing:.1em;}
+</style></head><body>
+<h1>取扱説明書 ── TELEPHOTONE</h1>
+<div class="plate">Telephotone 　テレフォトン<br>型式:TPV-04<br>TELEPHONOVISION('26年製)</div>
+<p>本機は、光の点滅で「楽譜」を遠くへ送る可視光楽器です。音声を電気でなく光で送る ──
+それが TELEPHONOVISION の TELEPHOTONE。伝送プロトコル一式は
+<b>LIDI規格(Light Instrument Digital Interface)</b> に準拠しています。</p>
+<h2>一、原理(LIDIスコア伝送)</h2>
+<p>鍵盤で作った楽譜(音高2オクターブ・音価8種・テンポ)を、発光窓の高速点滅
+(マンチェスター符号+誤り訂正FEC+CRC照合)で送信します。リアルタイム演奏ではなく、
+受信機が楽譜を完全受信してから内蔵音源で演奏します。明/暗の2値伝送のため、
+輝度の微妙な差を読む方式より格段に環境に強く、距離も伸びます。</p>
+<h2>二、使い方</h2>
+<ol>
+<li><b>送信側:</b>主電源を入れ、鍵盤をタップして音符を追加(音価は方向幕で選択)。REST=休符、UNDO=1つ戻す。プリセット(LOAD)も使えます</li>
+<li><b>送信側:</b>PREVIEWで試聴 → WINDOWを開いて受信カメラへ正対 → SENDで点滅送信</li>
+<li><b>受信側:</b>主電源→RECEIVEでカメラ起動、白枠(ROI)を発光窓に合わせるだけ(較正不要・ビットレート自動検出)</li>
+<li>完全受信(CRC照合成功)すると受信機が自動で演奏します。PLAYで何度でも再演奏</li>
+</ol>
+<h2>三、スコア形式(LIDI Score)</h2>
+<table>
+<tr><th>テンポ</th><td>♩=40〜240 BPM(1バイト)</td></tr>
+<tr><th>音高</th><td>C4〜C6の25音+休符(5ビット)</td></tr>
+<tr><th>音価</th><td>1/16・1/8・付点1/8・1/4・付点1/4・1/2・付点1/2・全音符(3ビット)</td></tr>
+<tr><th>保護</th><td>Hamming(8,4)誤り訂正+CRC-16照合。破損時は再送を要求</td></tr>
+<tr><th>容量</th><td>最大254音符/1通</td></tr>
+</table>
+<h2>四、受信機の設定(ローカル)</h2>
+<table>
+<tr><th>自機ID</th><td>A〜D。将来の制御層コマンドの宛先</td></tr>
+<tr><th>音色バンク</th><td>1〜8番(音色データは送らず番号で共有)</td></tr>
+<tr><th>移調</th><td>半音単位。複数受信機で+4/+7を重ねると1通の楽譜から和声</td></tr>
+</table>
+<h2>五、距離を伸ばす</h2>
+<ul>
+<li>ビットレートを下げる(5 BPS)。20 BPSは至近+60fpsカメラ用</li>
+<li>送信画面の輝度最大・自動輝度OFF。夕方以降〜夜間が本領</li>
+<li>ROIは発光窓ぴったりに。カメラは固定</li>
+</ul>
+<h2>六、安全上の注意</h2>
+<p><b>発光面を直視しないでください。</b>スコア送信は高速点滅を伴います。
+光の点滅に敏感な方は発作等を誘発するおそれがあります。</p>
+<div class="foot">TELEPHONOVISION SERIES ── TPV-03 MABATAKI SIGNAL / TPV-04 TELEPHOTONE<br>
+本機はLIDI規格に準拠しています。</div>
+</body></html>`);
+  d.close();
+};
 
+/* ---- 初期状態 ---- */
+renderScore();
+setStatus('');
 })();
 </script>
 </body>
