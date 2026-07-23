@@ -364,10 +364,11 @@
         <div id="scoreLine2"></div>
       </div>
 
-      <div class="lcdRow" style="margin-top:8px">
+      <div class="lcdRow four" style="margin-top:8px">
         <div class="lcd"><span class="v" id="lcdNote">---</span><span class="k">Last</span></div>
         <div class="lcd"><span class="v" id="lcdCount">0</span><span class="k">Notes</span></div>
-        <div class="lcd"><span class="v" id="lcdEst">--</span><span class="k">Est.s</span></div>
+        <div class="lcd"><span class="v" id="lcdBytes">--</span><span class="k">Bytes</span></div>
+        <div class="lcd"><span class="v" id="lcdEst">--</span><span class="k">TX Sec</span></div>
       </div>
 
       <div class="setGrid">
@@ -401,9 +402,10 @@
       <div class="setGrid">
         <div><span class="lbl">Bit Rate ── blink speed</span>
           <select id="bpsSel">
-            <option value="5">5 BPS ── FAR / SAFE</option>
-            <option value="10" selected>10 BPS ── STANDARD</option>
-            <option value="15">15 BPS ── NEAR</option>
+            <option value="2" selected>2 BPS ── FAR / SUREST</option>
+            <option value="5">5 BPS ── STANDARD</option>
+            <option value="10">10 BPS ── NEAR</option>
+            <option value="15">15 BPS ── CLOSE</option>
             <option value="20">20 BPS ── CLOSE·60FPS</option>
           </select></div>
         <div><div class="tgl" style="margin-top:24px"><input type="checkbox" id="txMonitor" checked><span>KEY TONE</span></div></div>
@@ -508,7 +510,7 @@
           <li>One blinking light, many receivers: every phone that decodes the score plays it. Set Transpose A=±0 / B=+4 / C=+7 for parallel harmony</li>
           <li>Binary blink (bright/dark) is far more robust than luminance levels ── works in daylight-ish conditions and at distance</li>
           <li>Keep only the emitting surface inside the ROI; fix the camera</li>
-          <li>Lower bit rate (5 BPS) for long distance; 20 BPS needs a 60fps camera up close</li>
+          <li>2 BPS is the surest (MABATAKI-proven). Raise the rate only when the waveform looks cleanly square</li>
           <li>Camera requires https (or localhost)</li>
           <li><b>iPhone: turn OFF the side silent switch</b> ── Web Audio is muted while the ringer is silenced</li>
         </ul>
@@ -1045,10 +1047,11 @@ function renderScore(){
   const n = score.events.length;
   $('lcdCount').textContent = n;
   $('lcdNote').textContent = n ? (score.events[n-1].p > 0 ? semiName(score.events[n-1].p - 1) : 'RST') : '---';
+  $('lcdBytes').textContent = n ? (1 + n) : '--';
   $('lcdEst').textContent = n ? estSeconds().toFixed(0) : '--';
   const tail = score.events.slice(-7).map(ev => `<bdi>${evText(ev)}</bdi>`).join('<bdi> · </bdi>');
   $('scoreLine').innerHTML = tail || '<bdi>EMPTY ── TAP KEYS TO ADD NOTES</bdi>';
-  $('scoreLine2').textContent = `♩=${score.tempo} · ${n}/254 NOTES · EST ${n ? estSeconds().toFixed(1) : '-'}S @${$('bpsSel').value}BPS`;
+  $('scoreLine2').textContent = `♩=${score.tempo} · ${n}/254 NOTES · ${1 + n}B · TX ${n ? estSeconds().toFixed(1) : '-'}S @${$('bpsSel').value}BPS`;
 }
 function appendEvent(p){
   if (needPower()) return;
@@ -1674,7 +1677,7 @@ td,th{border:1px solid #c9c7bf; padding:4px 12px; text-align:left;}
 </table>
 <h2>五、距離を伸ばす</h2>
 <ul>
-<li>ビットレートを下げる(5 BPS)。20 BPSは至近+60fpsカメラ用</li>
+<li>2 BPSが最も確実。波形モニタが綺麗な矩形なら段階的に上げる。20 BPSは至近+60fpsカメラ用</li>
 <li>送信画面の輝度最大・自動輝度OFF。夕方以降〜夜間が本領</li>
 <li>ROIは発光窓ぴったりに。カメラは固定</li>
 </ul>
