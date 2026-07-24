@@ -358,7 +358,7 @@
           <span class="fnLbl">SEND</span><span class="fnSub">BLINK TX</span></span></button>
       </div>
 
-      <label>Score Buffer ── tap keys to add notes</label>
+      <label>Score Buffer ── play keys to record</label>
       <div class="screen scoreScreen">
         <div id="scoreLine"></div>
         <div id="scoreLine2"></div>
@@ -372,7 +372,7 @@
       </div>
 
       <div class="setGrid">
-        <div><span class="lbl">Note Value 音価</span>
+        <div><span class="lbl">Note Value ── step/rest</span>
           <select id="durSel">
             <option value="0">1/16</option>
             <option value="1">1/8</option>
@@ -400,15 +400,18 @@
       </div>
 
       <div class="setGrid">
-        <div><span class="lbl">Bit Rate ── blink speed</span>
+        <div><span class="lbl">Rate</span>
           <select id="bpsSel">
-            <option value="2" selected>2 BPS ── FAR / SUREST</option>
-            <option value="5">5 BPS ── STANDARD</option>
-            <option value="10">10 BPS ── NEAR</option>
-            <option value="15">15 BPS ── CLOSE</option>
-            <option value="20">20 BPS ── CLOSE·60FPS</option>
+            <option value="2" selected>2 BPS</option>
+            <option value="5">5 BPS</option>
+            <option value="10">10 BPS</option>
+            <option value="15">15 BPS</option>
+            <option value="20">20 BPS</option>
           </select></div>
-        <div><div class="tgl" style="margin-top:24px"><input type="checkbox" id="txMonitor" checked><span>KEY TONE</span></div></div>
+        <div>
+          <div class="tgl" style="margin-top:20px"><input type="checkbox" id="txMonitor" checked><span>KEY TONE</span></div>
+          <div class="tgl"><input type="checkbox" id="holdMode" checked><span>HOLD INPUT</span></div>
+        </div>
       </div>
 
       <hr class="rule">
@@ -423,7 +426,7 @@
         <button class="miniBtn" id="loadBtn" style="flex:none; width:72px; margin-top:0">LOAD</button>
       </div>
 
-      <div class="meta">Tap keys to build a score (note value from the roller), then SEND ── the window blinks the score as light. Not realtime: the receiver decodes, then performs it.</div>
+      <div class="meta">HOLD INPUT: just play ── press length becomes the note value, silence becomes rests (quantized to ♩=tempo). Then SEND blinks the score as light; the receiver decodes and performs it automatically.</div>
     </section>
 
     <!-- ---- 02 受信部(点滅復調+自動演奏) ---- -->
@@ -1067,16 +1070,57 @@ $('undoBtn').onclick = () => {
 };
 $('clearBtn').onclick = () => {
   if (needPower()) return;
-  score.events = []; renderScore();
+  score.events = []; lastReleaseT = 0; renderScore();
   showHint('SCORE CLEARED');
 };
 $('tempoSel').addEventListener('change', () => { score.tempo = +$('tempoSel').value; renderScore(); });
 $('bpsSel').addEventListener('change', renderScore);
 
-/* 鍵盤ステップ入力(押下=追加+試聴) */
+/* ================================================================
+ * 鍵盤入力 ── 2方式
+ * HOLD INPUT(既定): 押した長さがそのまま音価に量子化される。
+ *   押し合間の無音も休符として自動挿入 ── 普通に弾けば楽譜になる。
+ * STEP(HOLDをOFF): 従来どおりタップで方向幕の音価を追加。
+ * ================================================================ */
+function quantizeDur(ms){
+  const beat = 60000 / score.tempo;
+  let best = 0, bd = Infinity;
+  for (let i = 0; i < DURS.length; i++){
+    const d = Math.abs(ms - DURS[i].beats * beat);
+    if (d < bd){ bd = d; best = i; }
+  }
+  return best;
+}
+let lastReleaseT = 0;
+function maybeInsertRest(nowT){
+  if (!lastReleaseT) return;
+  const gap = nowT - lastReleaseT;
+  const beat = 60000 / score.tempo;
+  if (gap < beat * 0.25 * 0.6) return;        // 1/16未満の隙間は無視
+  const capped = Math.min(gap, beat * 4);      // 長い間は全休符1つに丸める
+  score.events.push({ p: 0, d: quantizeDur(capped) });
+}
+function holdStart(semi){
+  txVoice.ensure();
+  hlMain(semi);
+  if ($('txMonitor').checked){ txVoice.setTone(0); txVoice.noteOn(semiFreq(semi, 0)); }
+}
+function holdEnd(semi, downT){
+  hlMain(-1);
+  txVoice.noteOff();
+  if (sending){ showHint('SENDING ── WAIT OR STOP'); return; }
+  if (score.events.length >= 253){ showHint('SCORE FULL'); return; }
+  if ($('holdMode').checked){
+    const now = performance.now();
+    maybeInsertRest(downT);
+    score.events.push({ p: semi + 1, d: quantizeDur(now - downT) });
+    lastReleaseT = now;
+    renderScore();
+  }
+}
 (function bindKb(){
   const el = $('kbMain');
-  let activeSemi = -1;
+  let activeSemi = -1, downT = 0;
   function semiAt(ev){
     const target = document.elementFromPoint(ev.clientX, ev.clientY);
     if (target && target.dataset && target.dataset.semi !== undefined) return +target.dataset.semi;
@@ -1084,20 +1128,16 @@ $('bpsSel').addEventListener('change', renderScore);
   }
   el.addEventListener('pointerdown', ev => {
     const semi = semiAt(ev);
-    if (semi === null) return;
-    if (needPower()) return;
-    activeSemi = semi;
-    txVoice.ensure();
-    hlMain(semi);
-    if ($('txMonitor').checked){ txVoice.setTone(0); txVoice.noteOn(semiFreq(semi, 0)); }
-    appendEvent(semi + 1);
+    if (semi === null || needPower()) return;
+    activeSemi = semi; downT = performance.now();
+    holdStart(semi);
+    if (!$('holdMode').checked) appendEvent(semi + 1);   // STEP方式は押下で確定
     ev.preventDefault();
   });
   function release(){
     if (activeSemi < 0) return;
-    activeSemi = -1;
-    hlMain(-1);
-    txVoice.noteOff();
+    const semi = activeSemi; activeSemi = -1;
+    holdEnd(semi, downT);
   }
   el.addEventListener('pointerup', release);
   el.addEventListener('pointercancel', release);
@@ -1107,18 +1147,23 @@ const KEYMAP = {
   'z':0,'s':1,'x':2,'d':3,'c':4,'v':5,'g':6,'b':7,'h':8,'n':9,'j':10,'m':11,',':12,
   'q':12,'2':13,'w':14,'3':15,'e':16,'r':17,'5':18,'t':19,'6':20,'y':21,'7':22,'u':23,'i':24
 };
+const keyDownT = {};
 window.addEventListener('keydown', ev => {
   if (ev.repeat) return;
   if (/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) return;
   const semi = KEYMAP[ev.key.toLowerCase()];
   if (semi === undefined || needPower()) return;
-  hlMain(semi);
-  if ($('txMonitor').checked){ txVoice.setTone(0); txVoice.noteOn(semiFreq(semi, 0)); }
-  appendEvent(semi + 1);
+  keyDownT[ev.key.toLowerCase()] = performance.now();
+  holdStart(semi);
+  if (!$('holdMode').checked) appendEvent(semi + 1);
   ev.preventDefault();
 });
 window.addEventListener('keyup', ev => {
-  if (KEYMAP[ev.key.toLowerCase()] !== undefined){ hlMain(-1); txVoice.noteOff(); }
+  const k = ev.key.toLowerCase();
+  const semi = KEYMAP[k];
+  if (semi === undefined || !(k in keyDownT)) return;
+  const dT = keyDownT[k]; delete keyDownT[k];
+  holdEnd(semi, dT);
 });
 
 /* ---- プリセットスコア(パブリックドメイン/units=8分音符換算から変換) ---- */
@@ -1149,6 +1194,7 @@ $('loadBtn').onclick = () => {
   $('tempoSel').selectedIndex = best;
   score.tempo = opts[best];
   syncRollers();
+  lastReleaseT = 0;
   renderScore();
   showHint('LOADED: ' + t.name);
 };
