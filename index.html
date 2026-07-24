@@ -1274,6 +1274,7 @@ async function startSend(){
   const raf = popAlive() ? popWin.requestAnimationFrame.bind(popWin) : requestAnimationFrame;
   const t0 = performance.now();
   const total = LEAD + hb.length * halfT + TAIL;
+  let lastRem = -1;
   function frame(){
     if (!sending) return;
     if (popAlive() && popWin.closed){ stopSend(); return; }
@@ -1285,6 +1286,16 @@ async function startSend(){
       v = idx < hb.length ? hb[idx] : 0;
     }
     surface(v);
+    // 送信残り時間の表示(TX Sec計器/システム表示/発光窓 ── 1秒刻みで更新)
+    const remS = Math.max(0, Math.ceil((total - el) / 1000));
+    if (remS !== lastRem){
+      lastRem = remS;
+      $('lcdEst').textContent = remS;
+      const frac = Math.min(1, el / total);
+      const filled = Math.round(frac * 10);
+      setStatus(`SENDING ${'█'.repeat(filled)}${'░'.repeat(10 - filled)} ${remS}S LEFT @${bps}BPS`);
+      setPopInfo(`SENDING ── ${remS}S ── DO NOT STARE`);
+    }
     sendRaf = raf(frame);
   }
   sendRaf = raf(frame);
@@ -1301,6 +1312,7 @@ function stopSend(done){
     if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
   }
   try { wakeLockTx?.release(); } catch(e){}
+  renderScore();   // TX Sec計器を見積り表示に戻す
   setStatus(done === true
     ? 'SEND COMPLETE ── RECEIVER SHOULD BE PLAYING'
     : 'SYSTEM READY ── BUILD A SCORE OR PRESS RECEIVE');
