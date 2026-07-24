@@ -411,6 +411,7 @@
         <div>
           <div class="tgl" style="margin-top:20px"><input type="checkbox" id="txMonitor" checked><span>KEY TONE</span></div>
           <div class="tgl"><input type="checkbox" id="holdMode" checked><span>HOLD INPUT</span></div>
+          <div class="tgl"><input type="checkbox" id="txBeacon" checked><span>BEACON</span></div>
         </div>
       </div>
 
@@ -505,7 +506,10 @@
           </select></div>
         <div><span class="lbl">Volume</span><input type="range" id="rxVol" min="0" max="100" value="70" style="margin-top:10px"></div>
       </div>
-      <div class="tgl"><input type="checkbox" id="rxMute"><span>MUTE</span></div>
+      <div style="display:flex; gap:24px">
+        <div class="tgl"><input type="checkbox" id="rxBeacon" checked><span>BEACON</span></div>
+        <div class="tgl"><input type="checkbox" id="rxMute"><span>MUTE</span></div>
+      </div>
 
       <details>
         <summary>ENSEMBLE ── how to build harmony</summary>
@@ -925,7 +929,22 @@ function makeVoice(){
     gain.gain.cancelScheduledValues(now);
     gain.gain.setTargetAtTime(0, now, Math.max(0.02, t.r / 3));
   }
-  return { ensure, noteOn, noteOff, setTone(i){ curTone = i; }, setVolume(v){ master = v; } };
+  /* ビーコン(電信音)── 点滅の明時にトーンを鳴らす。専用osc+gainを同一ctxに常設 */
+  let bOsc = null, bGain = null, bCur = -1;
+  function beacon(on, freq){
+    if (!ensure()) return;
+    if (!bOsc){
+      bOsc = ctx.createOscillator(); bOsc.type = 'square';
+      bOsc.frequency.value = freq || 770;
+      bGain = ctx.createGain(); bGain.gain.value = 0;
+      bOsc.connect(bGain); bGain.connect(ctx.destination);
+      bOsc.start();
+    }
+    if (freq) bOsc.frequency.value = freq;
+    const t = on ? 0.05 : 0;
+    if (t !== bCur){ bCur = t; bGain.gain.setTargetAtTime(t, ctx.currentTime, 0.004); }
+  }
+  return { ensure, noteOn, noteOff, beacon, setTone(i){ curTone = i; }, setVolume(v){ master = v; } };
 }
 const txVoice = makeVoice();
 const rxVoice = makeVoice();
@@ -1286,6 +1305,7 @@ async function startSend(){
       v = idx < hb.length ? hb[idx] : 0;
     }
     surface(v);
+    txVoice.beacon($('txBeacon').checked && v === 1, 770);
     // 送信残り時間の表示(TX Sec計器/システム表示/発光窓 ── 1秒刻みで更新)
     const remS = Math.max(0, Math.ceil((total - el) / 1000));
     if (remS !== lastRem){
@@ -1305,6 +1325,7 @@ function stopSend(done){
   sending = false;
   try { cancelAnimationFrame(sendRaf); if (popAlive()) popWin.cancelAnimationFrame(sendRaf); } catch(e){}
   $('sendKey').classList.remove('lit');
+  txVoice.beacon(false);
   surface(0);
   if (popAlive()) setPopInfo('STANDBY ── SEND A SCORE');
   else {
@@ -1456,6 +1477,7 @@ async function startCamera(){
 }
 function stopCamera(){
   stopSampling();
+  rxVoice.beacon(false);
   stream?.getTracks().forEach(t => t.stop());
   stream = null; track = null;
   demod.reset();
@@ -1577,6 +1599,7 @@ function startSampling(){
       waveBuf.push({ t, l: luma });
       while (waveBuf.length && t - waveBuf[0].t > 4000) waveBuf.shift();
       demod.feed(t, luma);
+      rxVoice.beacon($('rxBeacon').checked && demod.state !== 'no_signal' && demod.bin === 1, 660);
       if (demod.state !== 'frame') resetRxIdle();   // 受信中断→表示を戻す
       drawWave();
       drawRoiOverlay(luma);
